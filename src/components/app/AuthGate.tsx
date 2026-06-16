@@ -40,7 +40,6 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
       }));
       toast.success(`Welcome, ${username.trim()}.`);
     } else {
-      const u = useStore.getState ? null : null; // placeholder
       // Sign in
       setState((s) => {
         if (!s.user) {
