@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Calendar as CalIcon } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { AuthGate } from "@/components/app/AuthGate";
@@ -141,12 +141,12 @@ function EventDialog({ open, onOpenChange, initialDate, editEvent }: { open: boo
   const [time, setTime] = useState(editEvent?.time ?? "");
   const [color, setColor] = useState<string>(editEvent?.color ?? EVENT_COLORS[0]);
 
-  // reset when opens with new content
-  useMemoSync(() => {
+  useEffect(() => {
     setName(editEvent?.name ?? "");
     setDate(editEvent?.date ?? initialDate ?? todayISO());
     setTime(editEvent?.time ?? "");
     setColor(editEvent?.color ?? EVENT_COLORS[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editEvent?.id, initialDate]);
 
   function save(e: React.FormEvent) {
@@ -197,5 +197,3 @@ function EventDialog({ open, onOpenChange, initialDate, editEvent }: { open: boo
   );
 }
 
-import { useEffect } from "react";
-function useMemoSync(fn: () => void, deps: unknown[]) { useEffect(fn, deps); }
