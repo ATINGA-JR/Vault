@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchRouteImport } from './routes/watch'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as ShoppingRouteImport } from './routes/shopping'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReadingRouteImport } from './routes/reading'
 import { Route as CashFlowRouteImport } from './routes/cash-flow'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -24,6 +26,16 @@ const WatchRoute = WatchRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShoppingRoute = ShoppingRouteImport.update({
+  id: '/shopping',
+  path: '/shopping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReadingRoute = ReadingRouteImport.update({
@@ -52,6 +64,8 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/cash-flow': typeof CashFlowRoute
   '/reading': typeof ReadingRoute
+  '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
   '/watch': typeof WatchRoute
 }
@@ -60,6 +74,8 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/cash-flow': typeof CashFlowRoute
   '/reading': typeof ReadingRoute
+  '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
   '/watch': typeof WatchRoute
 }
@@ -69,20 +85,40 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/cash-flow': typeof CashFlowRoute
   '/reading': typeof ReadingRoute
+  '/settings': typeof SettingsRoute
+  '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
   '/watch': typeof WatchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/calendar' | '/cash-flow' | '/reading' | '/tasks' | '/watch'
+  fullPaths:
+    | '/'
+    | '/calendar'
+    | '/cash-flow'
+    | '/reading'
+    | '/settings'
+    | '/shopping'
+    | '/tasks'
+    | '/watch'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/calendar' | '/cash-flow' | '/reading' | '/tasks' | '/watch'
+  to:
+    | '/'
+    | '/calendar'
+    | '/cash-flow'
+    | '/reading'
+    | '/settings'
+    | '/shopping'
+    | '/tasks'
+    | '/watch'
   id:
     | '__root__'
     | '/'
     | '/calendar'
     | '/cash-flow'
     | '/reading'
+    | '/settings'
+    | '/shopping'
     | '/tasks'
     | '/watch'
   fileRoutesById: FileRoutesById
@@ -92,6 +128,8 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   CashFlowRoute: typeof CashFlowRoute
   ReadingRoute: typeof ReadingRoute
+  SettingsRoute: typeof SettingsRoute
+  ShoppingRoute: typeof ShoppingRoute
   TasksRoute: typeof TasksRoute
   WatchRoute: typeof WatchRoute
 }
@@ -110,6 +148,20 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shopping': {
+      id: '/shopping'
+      path: '/shopping'
+      fullPath: '/shopping'
+      preLoaderRoute: typeof ShoppingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reading': {
@@ -148,6 +200,8 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   CashFlowRoute: CashFlowRoute,
   ReadingRoute: ReadingRoute,
+  SettingsRoute: SettingsRoute,
+  ShoppingRoute: ShoppingRoute,
   TasksRoute: TasksRoute,
   WatchRoute: WatchRoute,
 }
