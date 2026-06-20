@@ -59,30 +59,35 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
 
   return (
     <div className="grid min-h-screen md:grid-cols-2">
-      {/* Left brand panel */}
-      <div className="relative hidden flex-col justify-between overflow-hidden bg-secondary p-12 md:flex">
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-primary text-primary-foreground font-serif text-xl">J</div>
+      {/* Left brand panel — executive navy */}
+      <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-foreground md:flex">
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "28px 28px" }} />
+        <div className="relative flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-display text-lg font-semibold">J</div>
           <div>
-            <div className="font-serif text-xl leading-none tracking-tight">Jarvis</div>
-            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Personal OS</div>
+            <div className="font-display text-lg font-semibold leading-none tracking-tight">JARVIS</div>
+            <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-sidebar-foreground/60">Personal Operating System</div>
           </div>
         </div>
 
-        <div className="max-w-md">
-          <h1 className="font-serif text-5xl leading-[1.05] tracking-tight">
-            One quiet place<br />for everything<br />you tend to.
+        <div className="relative max-w-md">
+          <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sidebar-border/60 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/70">
+            <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary" /> Private workspace
+          </div>
+          <h1 className="text-display text-5xl leading-[1.02]">
+            Command<br />of the quiet<br />things.
           </h1>
-          <p className="mt-6 text-base leading-relaxed text-muted-foreground">
-            Money, tasks, reading, watching, calendar, shopping — held together in one calm, considered space.
+          <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-sidebar-foreground/70">
+            Capital, commitments, calendars, and consumption — consolidated into a single instrument built for one operator.
           </p>
         </div>
 
-        <div className="flex items-end justify-between text-xs text-muted-foreground">
-          <span>Built for one. Yours alone.</span>
+        <div className="relative flex items-end justify-between text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
+          <span>Single tenant · Local first</span>
           <span className="tabular-nums">v1.0</span>
         </div>
       </div>
+
 
       {/* Right form */}
       <div className="flex items-center justify-center p-6 md:p-12">
