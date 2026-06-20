@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import {
   LayoutDashboard, ListTodo, Wallet, BookOpen, Film, CalendarDays,
-  ShoppingCart, Settings as SettingsIcon, Bell, Sun, Moon, LogOut, Menu, X,
+  ShoppingCart, Settings as SettingsIcon, Bell, Sun, Moon, LogOut, Menu, X, ShieldCheck,
 } from "lucide-react";
 import { useStore, setState } from "@/lib/store";
 import { greeting, formatDate } from "@/lib/format";
@@ -15,6 +15,7 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" as const },
   { to: "/tasks", label: "Tasks", icon: ListTodo, key: "tasks" as const },
   { to: "/cash-flow", label: "Cash Flow", icon: Wallet, key: "cash" as const },
+  { to: "/vault", label: "Vault", icon: ShieldCheck, key: "vault" as const },
   { to: "/reading", label: "Reading List", icon: BookOpen, key: "reading" as const },
   { to: "/watch", label: "Watch List", icon: Film, key: "watch" as const },
   { to: "/calendar", label: "Calendar", icon: CalendarDays, key: "calendar" as const },
