@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WatchRouteImport } from './routes/watch'
+import { Route as VaultRouteImport } from './routes/vault'
 import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ShoppingRouteImport } from './routes/shopping'
 import { Route as SettingsRouteImport } from './routes/settings'
@@ -21,6 +22,11 @@ import { Route as IndexRouteImport } from './routes/index'
 const WatchRoute = WatchRouteImport.update({
   id: '/watch',
   path: '/watch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VaultRoute = VaultRouteImport.update({
+  id: '/vault',
+  path: '/vault',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TasksRoute = TasksRouteImport.update({
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
+  '/vault': typeof VaultRoute
   '/watch': typeof WatchRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
+  '/vault': typeof VaultRoute
   '/watch': typeof WatchRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRoute
   '/shopping': typeof ShoppingRoute
   '/tasks': typeof TasksRoute
+  '/vault': typeof VaultRoute
   '/watch': typeof WatchRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/tasks'
+    | '/vault'
     | '/watch'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/tasks'
+    | '/vault'
     | '/watch'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/shopping'
     | '/tasks'
+    | '/vault'
     | '/watch'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   SettingsRoute: typeof SettingsRoute
   ShoppingRoute: typeof ShoppingRoute
   TasksRoute: typeof TasksRoute
+  VaultRoute: typeof VaultRoute
   WatchRoute: typeof WatchRoute
 }
 
@@ -141,6 +154,13 @@ declare module '@tanstack/react-router' {
       path: '/watch'
       fullPath: '/watch'
       preLoaderRoute: typeof WatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vault': {
+      id: '/vault'
+      path: '/vault'
+      fullPath: '/vault'
+      preLoaderRoute: typeof VaultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/tasks': {
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   SettingsRoute: SettingsRoute,
   ShoppingRoute: ShoppingRoute,
   TasksRoute: TasksRoute,
+  VaultRoute: VaultRoute,
   WatchRoute: WatchRoute,
 }
 export const routeTree = rootRouteImport

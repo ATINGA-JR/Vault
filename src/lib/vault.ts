@@ -74,13 +74,13 @@ function loadOnce() {
 async function deriveKey(password: string, saltBytes: Uint8Array): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(password),
+    new TextEncoder().encode(password) as BufferSource,
     "PBKDF2",
     false,
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt: saltBytes, iterations: ITERATIONS, hash: "SHA-256" },
+    { name: "PBKDF2", salt: saltBytes as BufferSource, iterations: ITERATIONS, hash: "SHA-256" },
     baseKey,
     { name: "AES-GCM", length: 256 },
     false,
@@ -92,7 +92,7 @@ async function encryptEntries(entries: VaultEntry[]): Promise<StoredBlob> {
   if (!key || !salt) throw new Error("Vault locked");
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const plaintext = new TextEncoder().encode(JSON.stringify(entries));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, plaintext);
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, plaintext as BufferSource);
   return { salt: b64encode(salt), iv: b64encode(iv), ct: b64encode(ct) };
 }
 
@@ -118,9 +118,9 @@ export async function unlockVault(password: string): Promise<boolean> {
   const candidate = await deriveKey(password, saltBytes);
   try {
     const pt = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64decode(blob.iv) },
+      { name: "AES-GCM", iv: b64decode(blob.iv) as BufferSource },
       candidate,
-      b64decode(blob.ct),
+      b64decode(blob.ct) as BufferSource,
     );
     const entries = JSON.parse(new TextDecoder().decode(pt)) as VaultEntry[];
     key = candidate;
