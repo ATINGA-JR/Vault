@@ -52,20 +52,22 @@ export interface Transaction {
   createdAt: string;
 }
 
+export type BookStatus = "to-read" | "reading" | "read";
 export interface Book {
   id: ID;
   title: string;
   author: string;
-  read: boolean;
+  status: BookStatus;
   createdAt: string;
 }
 
 export type WatchType = "movie" | "series";
+export type WatchStatus = "to-watch" | "watching" | "watched";
 export interface Watch {
   id: ID;
   title: string;
   type: WatchType;
-  watched: boolean;
+  status: WatchStatus;
   createdAt: string;
 }
 
