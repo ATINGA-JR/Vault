@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_DATA, type AppData } from "./types";
+import { DEFAULT_DATA, type AppData, type Book, type BookStatus, type Watch, type WatchStatus } from "./types";
 
 const KEY = "jarvis-personal-os/v1";
 
@@ -15,7 +15,17 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<AppData>;
-      state = { ...DEFAULT_DATA, ...parsed, settings: { ...DEFAULT_DATA.settings, ...(parsed.settings ?? {}), notify: { ...DEFAULT_DATA.settings.notify, ...(parsed.settings?.notify ?? {}) } } };
+      state = {
+        ...DEFAULT_DATA,
+        ...parsed,
+        books: migrateBooks(parsed.books),
+        watchlist: migrateWatchlist(parsed.watchlist),
+        settings: {
+          ...DEFAULT_DATA.settings,
+          ...(parsed.settings ?? {}),
+          notify: { ...DEFAULT_DATA.settings.notify, ...(parsed.settings?.notify ?? {}) },
+        },
+      };
     }
   } catch {
     state = DEFAULT_DATA;
@@ -23,6 +33,24 @@ function load() {
   // apply theme
   if (state.settings.theme === "dark") document.documentElement.classList.add("dark");
   else document.documentElement.classList.remove("dark");
+}
+
+function migrateBooks(books: any[] | undefined): Book[] {
+  return (books ?? []).map((b) => {
+    if (b && typeof b.status === "string") return b as Book;
+    const status: BookStatus = b?.read === true ? "read" : "to-read";
+    const { read: _, ...rest } = b ?? {};
+    return { ...rest, status } as Book;
+  });
+}
+
+function migrateWatchlist(watchlist: any[] | undefined): Watch[] {
+  return (watchlist ?? []).map((w) => {
+    if (w && typeof w.status === "string") return w as Watch;
+    const status: WatchStatus = w?.watched === true ? "watched" : "to-watch";
+    const { watched: _, ...rest } = w ?? {};
+    return { ...rest, status } as Watch;
+  });
 }
 
 function persist() {
