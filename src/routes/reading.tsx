@@ -12,28 +12,47 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import type { BookStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/reading")({
   head: () => ({ meta: [{ title: "Reading List — Jarvis" }] }),
   component: () => (<AuthGate><AppShell><ReadingPage /></AppShell></AuthGate>),
 });
 
+const nextBookStatus = (status: BookStatus): BookStatus => {
+  if (status === "to-read") return "reading";
+  if (status === "reading") return "read";
+  return "to-read";
+};
+
+function statusLabel(status: BookStatus) {
+  return status === "to-read" ? "to read" : status;
+}
+
 function ReadingPage() {
   const books = useStore((s) => s.books);
-  const read = books.filter((b) => b.read).length;
-  const togo = books.length - read;
+  const read = books.filter((b) => b.status === "read").length;
+  const reading = books.filter((b) => b.status === "reading").length;
+  const togo = books.filter((b) => b.status === "to-read").length;
   const [tab, setTab] = useState("all");
-  const filtered = tab === "all" ? books : tab === "todo" ? books.filter((b) => !b.read) : books.filter((b) => b.read);
+  const filtered = tab === "all"
+    ? books
+    : tab === "todo"
+      ? books.filter((b) => b.status === "to-read")
+      : tab === "reading"
+        ? books.filter((b) => b.status === "reading")
+        : books.filter((b) => b.status === "read");
 
   return (
     <>
       <PageHeader eyebrow="Reading List" title="Books to read."
-        subtitle={`${read} read · ${togo} to go`} action={<AddBook />} />
+        subtitle={`${read} read · ${reading} reading · ${togo} to go`} action={<AddBook />} />
 
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="todo">To Read</TabsTrigger>
+          <TabsTrigger value="reading">Reading</TabsTrigger>
           <TabsTrigger value="read">Read</TabsTrigger>
         </TabsList>
         <TabsContent value={tab} className="mt-6">
@@ -44,14 +63,18 @@ function ReadingPage() {
               {filtered.map((b) => (
                 <li key={b.id} className="flex items-center gap-3 px-4 py-3">
                   <button
-                    onClick={() => setState((s) => ({ ...s, books: s.books.map((x) => x.id === b.id ? { ...x, read: !x.read } : x) }))}
+                    title={`Status: ${statusLabel(b.status)}. Click to advance.`}
+                    onClick={() => setState((s) => ({ ...s, books: s.books.map((x) => x.id === b.id ? { ...x, status: nextBookStatus(x.status) } : x) }))}
                     className={cn("grid h-5 w-5 shrink-0 place-items-center rounded border",
-                      b.read ? "border-primary bg-primary text-primary-foreground" : "border-border-strong")}>
-                    {b.read && <span className="text-[10px]">✓</span>}
+                      b.status === "read" ? "border-primary bg-primary text-primary-foreground" : "border-border-strong")}>
+                    {b.status === "reading" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+                    {b.status === "read" && <span className="text-[10px]">✓</span>}
                   </button>
                   <div className="min-w-0 flex-1">
-                    <div className={cn("truncate font-serif text-lg", b.read && "text-muted-foreground line-through")}>{b.title}</div>
-                    <div className="truncate text-xs text-muted-foreground">{b.author}</div>
+                    <div className={cn("truncate font-serif text-lg", b.status === "read" && "text-muted-foreground line-through")}>{b.title}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {b.author}{b.author && " · "}{statusLabel(b.status)}
+                    </div>
                   </div>
                   <button onClick={() => { setState((s) => ({ ...s, books: s.books.filter((x) => x.id !== b.id) })); toast.success("Removed"); }}
                     className="text-muted-foreground hover:text-destructive">
@@ -73,7 +96,7 @@ function AddBook() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    setState((s) => ({ ...s, books: [...s.books, { id: uid(), title: title.trim(), author: author.trim(), read: false, createdAt: new Date().toISOString() }] }));
+    setState((s) => ({ ...s, books: [...s.books, { id: uid(), title: title.trim(), author: author.trim(), status: "to-read" as BookStatus, createdAt: new Date().toISOString() }] }));
     toast.success("Book added"); setTitle(""); setAuthor(""); setOpen(false);
   }
   return (
