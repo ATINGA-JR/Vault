@@ -53,8 +53,8 @@ function Dashboard() {
     return {
       pendingTasks: tasks.filter((t) => !t.done).length,
       income, expense, balance: income - expense,
-      booksToRead: books.filter((b) => !b.read).length,
-      moviesToWatch: watchlist.filter((w) => !w.watched).length,
+      booksToRead: books.filter((b) => b.status === "to-read").length,
+      moviesToWatch: watchlist.filter((w) => w.status === "to-watch").length,
       shoppingLists: shoppingLists.length,
       pendingShopping,
       upcoming,
@@ -67,8 +67,8 @@ function Dashboard() {
     .slice(0, 5);
 
   const recentTx = [...transactions].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)).slice(0, 3);
-  const nextBook = books.find((b) => !b.read);
-  const nextMovie = watchlist.find((w) => !w.watched);
+  const nextBook = books.find((b) => b.status === "to-read");
+  const nextMovie = watchlist.find((w) => w.status === "to-watch");
   const incomePct = stats.income > 0 ? Math.min(100, (stats.expense / stats.income) * 100) : 0;
 
   return (
