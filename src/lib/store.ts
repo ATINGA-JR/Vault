@@ -35,7 +35,7 @@ function load() {
   else document.documentElement.classList.remove("dark");
 }
 
-function migrateBooks(books: any[]): Book[] {
+function migrateBooks(books: any[] | undefined): Book[] {
   return (books ?? []).map((b) => {
     if (b && typeof b.status === "string") return b as Book;
     const status: BookStatus = b?.read === true ? "read" : "to-read";
@@ -44,7 +44,7 @@ function migrateBooks(books: any[]): Book[] {
   });
 }
 
-function migrateWatchlist(watchlist: any[]): Watch[] {
+function migrateWatchlist(watchlist: any[] | undefined): Watch[] {
   return (watchlist ?? []).map((w) => {
     if (w && typeof w.status === "string") return w as Watch;
     const status: WatchStatus = w?.watched === true ? "watched" : "to-watch";
