@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 
 export const Route = createFileRoute("/")({
-  head: () => ({ meta: [{ title: "Dashboard — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — Vault" }] }),
   component: () => (
     <AuthGate>
       <AppShell>

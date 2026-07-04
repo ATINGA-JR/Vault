@@ -32,7 +32,7 @@ function SetupVault() {
     setBusy(true);
     try {
       await createVault(pwd);
-      toast.success("Vault created");
+      toast.success("Passcodes vault created");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {
@@ -47,7 +47,7 @@ function SetupVault() {
           <ShieldCheck className="h-5 w-5" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="font-display text-2xl tracking-tight">Initialize Vault</h1>
+          <h1 className="font-display text-2xl tracking-tight">Initialize Passcodes</h1>
           <p className="text-sm text-muted-foreground">Set a master password. Encryption happens on this device.</p>
         </div>
       </div>
@@ -69,7 +69,7 @@ function SetupVault() {
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono" />
         </Field>
         <button disabled={busy} className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-60">
-          {busy ? "Creating…" : "Create vault"}
+          {busy ? "Creating…" : "Create passcodes vault"}
         </button>
       </form>
     </CenterShell>
@@ -98,7 +98,7 @@ function UnlockScreen() {
           <Lock className="h-5 w-5" strokeWidth={1.75} />
         </div>
         <div>
-          <h1 className="font-display text-2xl tracking-tight">Unlock Vault</h1>
+          <h1 className="font-display text-2xl tracking-tight">Unlock Passcodes</h1>
           <p className="text-sm text-muted-foreground">Enter your master password to continue.</p>
         </div>
       </div>
@@ -120,14 +120,14 @@ function UnlockScreen() {
           </button>
         ) : (
           <div className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-xs">
-            <div className="mb-2 font-medium text-destructive">Vault cannot be recovered.</div>
+            <div className="mb-2 font-medium text-destructive">Passcodes cannot be recovered.</div>
             <div className="mb-3 text-muted-foreground">The only option is to wipe it and start over. All saved credentials will be permanently lost.</div>
             <div className="flex gap-2">
               <button onClick={() => setDanger(false)} className="rounded-md border border-border px-3 py-1.5">Cancel</button>
               <button
-                onClick={() => { destroyVault(); toast.success("Vault wiped"); }}
+                onClick={() => { destroyVault(); toast.success("Passcodes wiped"); }}
                 className="rounded-md bg-destructive px-3 py-1.5 text-destructive-foreground"
-              >Wipe vault</button>
+              >Wipe passcodes</button>
             </div>
           </div>
         )}
@@ -159,7 +159,7 @@ function VaultBrowser() {
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Encrypted · Local</div>
-          <h1 className="mt-1 font-display text-3xl tracking-tight">Vault</h1>
+          <h1 className="mt-1 font-display text-3xl tracking-tight">Passcodes</h1>
           <p className="mt-1 text-sm text-muted-foreground">{entries.length} {entries.length === 1 ? "credential" : "credentials"} stored.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -206,7 +206,7 @@ function EmptyState({ onNew, hasQuery }: { onNew: () => void; hasQuery: boolean 
   return (
     <div className="rounded-md border border-dashed border-border bg-muted/30 py-16 text-center">
       <KeyRound className="mx-auto mb-3 h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
-      <div className="font-display text-lg">{hasQuery ? "No matches" : "Vault is empty"}</div>
+      <div className="font-display text-lg">{hasQuery ? "No matches" : "No passcodes yet"}</div>
       <p className="mx-auto mt-1 max-w-xs text-sm text-muted-foreground">
         {hasQuery ? "Try a different search term." : "Add your first credential to begin."}
       </p>
