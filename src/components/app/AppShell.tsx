@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { NotificationPanel } from "./NotificationPanel";
 import { runReminders } from "@/lib/notifications";
 import { Toaster } from "@/components/ui/sonner";
-import vaultLogo from "@/assets/vault-logo.png";
+import { VaultLogo } from "@/components/app/VaultLogo";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" as const },
