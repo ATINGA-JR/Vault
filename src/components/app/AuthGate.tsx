@@ -94,7 +94,7 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
         <div className="w-full max-w-sm">
           <div className="mb-8 md:hidden">
             <div className="flex items-center gap-2">
-              <img src={vaultLogo} alt="Vault" width={36} height={36} className="h-9 w-9 rounded-md object-contain" loading="lazy" />
+              <VaultLogo className="h-5 w-5 text-foreground" />
               <span className="font-serif text-xl">Vault</span>
             </div>
           </div>
