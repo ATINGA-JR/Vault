@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Brand */}
       <div className="border-b border-sidebar-border px-6 py-6">
         <div className="flex items-center gap-2.5">
-          <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground font-serif text-lg">J</div>
+          <img src={vaultLogo} alt="Vault" width={36} height={36} className="h-9 w-9 rounded-md object-contain" />
           <div>
             <div className="font-serif text-lg leading-none tracking-tight">Vault</div>
             <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Personal OS</div>
