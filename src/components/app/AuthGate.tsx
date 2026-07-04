@@ -64,7 +64,7 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
       <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-foreground md:flex">
         <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "28px 28px" }} />
         <div className="relative flex items-center gap-3">
-          <img src={vaultLogo} alt="Vault" width={40} height={40} className="h-10 w-10 rounded-md bg-sidebar-primary object-contain p-1" />
+          <VaultLogo className="h-6 w-6 text-sidebar-foreground" />
           <div>
             <div className="font-display text-lg font-semibold leading-none tracking-tight">VAULT</div>
           </div>
