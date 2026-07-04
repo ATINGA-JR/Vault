@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import { NotificationPanel } from "./NotificationPanel";
 import { runReminders } from "@/lib/notifications";
 import { Toaster } from "@/components/ui/sonner";
-import vaultLogo from "@/assets/vault-logo.png";
+import { VaultLogo } from "@/components/app/VaultLogo";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" as const },
@@ -81,7 +81,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Brand */}
       <div className="border-b border-sidebar-border px-6 py-6">
         <div className="flex items-center gap-2.5">
-          <img src={vaultLogo} alt="Vault" width={36} height={36} className="h-9 w-9 rounded-md object-contain" />
+          <VaultLogo className="h-6 w-6 text-sidebar-foreground" />
           <div>
             <div className="font-serif text-lg leading-none tracking-tight">Vault</div>
             <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Personal OS</div>
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2">
-          <img src={vaultLogo} alt="Vault" width={32} height={32} className="h-8 w-8 rounded-md object-contain" loading="lazy" />
+          <VaultLogo className="h-6 w-6 text-foreground" />
           <span className="font-serif text-lg">Vault</span>
         </div>
         <div className="flex items-center gap-1">
