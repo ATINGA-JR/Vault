@@ -18,7 +18,7 @@ import { CATEGORIES, type Bank, type Category, type Transaction, type TxType } f
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/cash-flow")({
-  head: () => ({ meta: [{ title: "Cash Flow — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Cash Flow — Vault" }] }),
   component: () => (<AuthGate><AppShell><CashFlowPage /></AppShell></AuthGate>),
 });
 

@@ -17,7 +17,7 @@ import type { Priority, Task } from "@/lib/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/tasks")({
-  head: () => ({ meta: [{ title: "Tasks — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Tasks — Vault" }] }),
   component: () => (
     <AuthGate><AppShell><TasksPage /></AppShell></AuthGate>
   ),

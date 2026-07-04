@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import type { BookStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/reading")({
-  head: () => ({ meta: [{ title: "Reading List — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Reading List — Vault" }] }),
   component: () => (<AuthGate><AppShell><ReadingPage /></AppShell></AuthGate>),
 });
 

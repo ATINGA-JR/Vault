@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Settings — Vault" }] }),
   component: () => (<AuthGate><AppShell><SettingsPage /></AppShell></AuthGate>),
 });
 
@@ -45,7 +45,7 @@ function SettingsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Settings" title="Personal preferences." subtitle="Tune Jarvis to your taste." />
+      <PageHeader eyebrow="Settings" title="Personal preferences." subtitle="Tune Vault to your taste." />
 
       <Section title="Profile">
         <div className="rounded-lg border border-border bg-card p-6">

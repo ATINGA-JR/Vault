@@ -94,7 +94,7 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
           <div className="mb-8 md:hidden">
             <div className="flex items-center gap-2">
               <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground font-serif">J</div>
-              <span className="font-serif text-xl">Jarvis</span>
+              <span className="font-serif text-xl">Vault</span>
             </div>
           </div>
 

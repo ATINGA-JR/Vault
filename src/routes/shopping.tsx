@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import type { ShoppingList } from "@/lib/types";
 
 export const Route = createFileRoute("/shopping")({
-  head: () => ({ meta: [{ title: "Shopping — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Shopping — Vault" }] }),
   component: () => (<AuthGate><AppShell><ShoppingPage /></AppShell></AuthGate>),
 });
 

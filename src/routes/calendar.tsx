@@ -15,7 +15,7 @@ import { EVENT_COLORS, type CalendarEvent } from "@/lib/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/calendar")({
-  head: () => ({ meta: [{ title: "Calendar — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Calendar — Vault" }] }),
   component: () => (<AuthGate><AppShell><CalendarPage /></AppShell></AuthGate>),
 });
 

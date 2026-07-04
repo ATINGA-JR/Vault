@@ -15,7 +15,7 @@ const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" as const },
   { to: "/tasks", label: "Tasks", icon: ListTodo, key: "tasks" as const },
   { to: "/cash-flow", label: "Cash Flow", icon: Wallet, key: "cash" as const },
-  { to: "/vault", label: "Vault", icon: ShieldCheck, key: "vault" as const },
+  { to: "/vault", label: "Passcodes", icon: ShieldCheck, key: "vault" as const },
   { to: "/reading", label: "Reading List", icon: BookOpen, key: "reading" as const },
   { to: "/watch", label: "Watch List", icon: Film, key: "watch" as const },
   { to: "/calendar", label: "Calendar", icon: CalendarDays, key: "calendar" as const },
@@ -82,7 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="flex items-center gap-2.5">
           <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground font-serif text-lg">J</div>
           <div>
-            <div className="font-serif text-lg leading-none tracking-tight">Jarvis</div>
+            <div className="font-serif text-lg leading-none tracking-tight">Vault</div>
             <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Personal OS</div>
           </div>
         </div>
@@ -168,7 +168,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2">
           <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-serif">J</div>
-          <span className="font-serif text-lg">Jarvis</span>
+          <span className="font-serif text-lg">Vault</span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => setNotifOpen(true)} className="relative rounded-md p-2 hover:bg-accent">

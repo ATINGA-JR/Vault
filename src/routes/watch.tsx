@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import type { WatchType, WatchStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/watch")({
-  head: () => ({ meta: [{ title: "Watch List — Jarvis" }] }),
+  head: () => ({ meta: [{ title: "Watch List — Vault" }] }),
   component: () => (<AuthGate><AppShell><WatchPage /></AppShell></AuthGate>),
 });
 
