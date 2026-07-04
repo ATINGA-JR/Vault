@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import vaultLogo from "@/assets/vault-logo.png";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const session = useStore((s) => s.session);
