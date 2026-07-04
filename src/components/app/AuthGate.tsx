@@ -63,10 +63,9 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
       <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-foreground md:flex">
         <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "28px 28px" }} />
         <div className="relative flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-display text-lg font-semibold">J</div>
+          <div className="grid h-10 w-10 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-display text-lg font-semibold">V</div>
           <div>
-            <div className="font-display text-lg font-semibold leading-none tracking-tight">JARVIS</div>
-            <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-sidebar-foreground/60">Personal Operating System</div>
+            <div className="font-display text-lg font-semibold leading-none tracking-tight">VAULT</div>
           </div>
         </div>
 
@@ -83,8 +82,8 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
         </div>
 
         <div className="relative flex items-end justify-between text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
-          <span>Single tenant · Local first</span>
-          <span className="tabular-nums">v1.0</span>
+          <span />
+          <span />
         </div>
       </div>
 
