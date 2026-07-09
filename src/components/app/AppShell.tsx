@@ -5,18 +5,19 @@ import {
   ShoppingCart, Settings as SettingsIcon, Bell, Sun, Moon, LogOut, Menu, X, ShieldCheck,
 } from "lucide-react";
 import { useStore, setState } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/lib/supabase";
 import { greeting, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { NotificationPanel } from "./NotificationPanel";
 import { runReminders } from "@/lib/notifications";
 import { Toaster } from "@/components/ui/sonner";
-import { VaultLogo } from "@/components/app/VaultLogo";
 
 const NAV = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, key: "dashboard" as const },
   { to: "/tasks", label: "Tasks", icon: ListTodo, key: "tasks" as const },
   { to: "/cash-flow", label: "Cash Flow", icon: Wallet, key: "cash" as const },
-  { to: "/vault", label: "Passcodes", icon: ShieldCheck, key: "vault" as const },
+  { to: "/vault", label: "Vault", icon: ShieldCheck, key: "vault" as const },
   { to: "/reading", label: "Reading List", icon: BookOpen, key: "reading" as const },
   { to: "/watch", label: "Watch List", icon: Film, key: "watch" as const },
   { to: "/calendar", label: "Calendar", icon: CalendarDays, key: "calendar" as const },
@@ -25,8 +26,10 @@ const NAV = [
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const session = useStore((s) => s.session);
-  const user = useStore((s) => s.user);
+  // Auth comes from Supabase — no longer from localStorage store
+  const { username, user } = useAuth();
+
+  // Data still comes from store (Phase 2b will migrate these one by one)
   const theme = useStore((s) => s.settings.theme);
   const tasks = useStore((s) => s.tasks);
   const events = useStore((s) => s.events);
@@ -55,7 +58,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     return diff >= 0 && diff < 7;
   }).length;
   const pendingShopping = shoppingLists.reduce(
-    (n, l) => n + l.sections.reduce((m, s) => m + s.items.filter((i) => !i.done).length, 0), 0,
+    (n, l) => n + l.sections.reduce((m, s) => m + s.items.filter((i) => !i.done).length, 0),
+    0,
   );
   const unreadNotifs = notifications.filter((n) => !n.read).length;
 
@@ -72,8 +76,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     else document.documentElement.classList.remove("dark");
   }
 
-  function signOut() {
-    setState((s) => ({ ...s, session: null }));
+  async function signOut() {
+    await supabase.auth.signOut();
+    // AuthProvider's onAuthStateChange listener will clear the session,
+    // AuthGate will re-render to the sign-in screen automatically.
   }
 
   const sidebarInner = (
@@ -81,16 +87,20 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Brand */}
       <div className="border-b border-sidebar-border px-6 py-6">
         <div className="flex items-center gap-2.5">
-          <VaultLogo className="h-6 w-6 text-sidebar-foreground" />
+          <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground font-serif text-lg">
+            V
+          </div>
           <div>
             <div className="font-serif text-lg leading-none tracking-tight">Vault</div>
-            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">Personal OS</div>
+            <div className="mt-1 text-[10px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              Personal OS
+            </div>
           </div>
         </div>
-        {session && user && (
+        {user && (
           <div className="mt-5">
             <div className="text-sm text-muted-foreground">{greeting()},</div>
-            <div className="font-serif text-xl">{user.username}.</div>
+            <div className="font-serif text-xl">{username ?? user.email?.split("@")[0]}.</div>
             <div className="mt-0.5 text-xs text-muted-foreground">{formatDate(new Date())}</div>
           </div>
         )}
@@ -100,7 +110,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       <nav className="flex-1 overflow-y-auto px-3 py-4">
         {NAV.map((item) => {
           const Icon = item.icon;
-          const active = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to));
+          const active =
+            location.pathname === item.to ||
+            (item.to !== "/" && location.pathname.startsWith(item.to));
           const badge = badges[item.key];
           return (
             <Link
@@ -116,10 +128,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
               <span className="flex-1">{item.label}</span>
               {badge ? (
-                <span className={cn(
-                  "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
-                  active ? "bg-primary text-primary-foreground" : "bg-sidebar-border/60 text-sidebar-foreground",
-                )}>{badge}</span>
+                <span
+                  className={cn(
+                    "min-w-[20px] rounded-full px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums",
+                    active
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-sidebar-border/60 text-sidebar-foreground",
+                  )}
+                >
+                  {badge}
+                </span>
               ) : null}
             </Link>
           );
@@ -135,26 +153,38 @@ export function AppShell({ children }: { children: ReactNode }) {
           <Bell className="h-4 w-4" strokeWidth={1.75} />
           <span className="flex-1 text-left">Notifications</span>
           {unreadNotifs ? (
-            <span className="min-w-[20px] rounded-full bg-primary px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground">{unreadNotifs}</span>
+            <span className="min-w-[20px] rounded-full bg-primary px-1.5 py-0.5 text-center text-[10px] font-semibold text-primary-foreground">
+              {unreadNotifs}
+            </span>
           ) : null}
         </button>
         <button
           onClick={toggleTheme}
           className="group flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
         >
-          {theme === "dark" ? <Sun className="h-4 w-4" strokeWidth={1.75} /> : <Moon className="h-4 w-4" strokeWidth={1.75} />}
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4" strokeWidth={1.75} />
+          ) : (
+            <Moon className="h-4 w-4" strokeWidth={1.75} />
+          )}
           <span className="flex-1 text-left">{theme === "dark" ? "Light mode" : "Dark mode"}</span>
         </button>
-        {session && user && (
+        {user && (
           <div className="mt-2 flex items-center gap-3 rounded-md px-3 py-2">
             <div className="grid h-8 w-8 place-items-center rounded-full bg-primary/15 text-primary font-medium">
-              {user.username.charAt(0).toUpperCase()}
+              {(username ?? user.email ?? "?").charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-medium">{user.username}</div>
+              <div className="truncate text-sm font-medium">
+                {username ?? user.email?.split("@")[0]}
+              </div>
               <div className="truncate text-xs text-muted-foreground">{user.email}</div>
             </div>
-            <button onClick={signOut} title="Sign out" className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground">
+            <button
+              onClick={signOut}
+              title="Sign out"
+              className="rounded-md p-1.5 text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            >
               <LogOut className="h-4 w-4" strokeWidth={1.75} />
             </button>
           </div>
@@ -168,13 +198,17 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Mobile top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/90 px-4 py-3 backdrop-blur md:hidden">
         <div className="flex items-center gap-2">
-          <VaultLogo className="h-6 w-6 text-foreground" />
+          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground font-serif">
+            V
+          </div>
           <span className="font-serif text-lg">Vault</span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => setNotifOpen(true)} className="relative rounded-md p-2 hover:bg-accent">
             <Bell className="h-5 w-5" strokeWidth={1.75} />
-            {unreadNotifs ? <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" /> : null}
+            {unreadNotifs ? (
+              <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary" />
+            ) : null}
           </button>
           <button onClick={() => setMobileOpen(true)} className="rounded-md p-2 hover:bg-accent">
             <Menu className="h-5 w-5" strokeWidth={1.75} />
@@ -191,9 +225,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile sidebar overlay */}
         {mobileOpen && (
           <div className="fixed inset-0 z-50 md:hidden">
-            <div className="absolute inset-0 bg-foreground/30 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+            <div
+              className="absolute inset-0 bg-foreground/30 backdrop-blur-sm"
+              onClick={() => setMobileOpen(false)}
+            />
             <aside className="absolute left-0 top-0 h-full w-72 max-w-[85%] border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-2xl">
-              <button onClick={() => setMobileOpen(false)} className="absolute right-3 top-3 z-10 rounded-md p-1.5 hover:bg-sidebar-accent">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className="absolute right-3 top-3 z-10 rounded-md p-1.5 hover:bg-sidebar-accent"
+              >
                 <X className="h-4 w-4" />
               </button>
               {sidebarInner}
