@@ -1,72 +1,100 @@
 import { useState, type ReactNode } from "react";
-import { useStore, setState, hashPwd } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { VaultLogo } from "@/components/app/VaultLogo";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/lib/auth";
 
 export function AuthGate({ children }: { children: ReactNode }) {
-  const session = useStore((s) => s.session);
-  const user = useStore((s) => s.user);
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
+  }
 
   if (session) return <>{children}</>;
 
-  return <AuthScreen hasUser={!!user} />;
+  return <AuthScreen />;
 }
 
-function AuthScreen({ hasUser }: { hasUser: boolean }) {
-  const [mode, setMode] = useState<"signin" | "signup">(hasUser ? "signin" : "signup");
+function AuthScreen() {
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (mode === "signup") {
-      if (!username.trim() || !email.trim() || !password.trim()) {
-        toast.error("Please fill all fields");
-        return;
-      }
-      setState((s) => ({
-        ...s,
-        user: {
-          username: username.trim(),
+    setBusy(true);
+
+    try {
+      if (mode === "signup") {
+        if (!username.trim()) {
+          toast.error("Username is required");
+          return;
+        }
+
+        const { error } = await supabase.auth.signUp({
           email: email.trim(),
-          passwordHash: hashPwd(password),
-          createdAt: new Date().toISOString(),
-        },
-        session: { username: username.trim() },
-      }));
-      toast.success(`Welcome, ${username.trim()}.`);
-    } else {
-      // Sign in
-      setState((s) => {
-        if (!s.user) {
-          toast.error("No account yet — create one first.");
-          return s;
+          password,
+          options: {
+            // Passed to the handle_new_user() trigger via raw_user_meta_data
+            data: { username: username.trim() },
+          },
+        });
+
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success(`Welcome, ${username.trim()}. Check your email to confirm your account.`);
         }
-        const matches = s.user.email === email.trim() && s.user.passwordHash === hashPwd(password);
-        if (!matches) {
-          toast.error("Wrong email or password");
-          return s;
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (error) {
+          toast.error("Wrong email or password.");
         }
-        toast.success(`Welcome back, ${s.user.username}.`);
-        return { ...s, session: { username: s.user.username } };
-      });
+        // On success, onAuthStateChange in AuthProvider updates the session
+        // and AuthGate re-renders with the app shell automatically.
+      }
+    } finally {
+      setBusy(false);
     }
   }
 
   return (
     <div className="grid min-h-screen md:grid-cols-2">
-      {/* Left brand panel — executive navy */}
+      {/* Left brand panel */}
       <div className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-12 text-sidebar-foreground md:flex">
-        <div className="pointer-events-none absolute inset-0 opacity-[0.07]" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)", backgroundSize: "28px 28px" }} />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)",
+            backgroundSize: "28px 28px",
+          }}
+        />
         <div className="relative flex items-center gap-3">
-          <VaultLogo className="h-6 w-6 text-sidebar-foreground" />
+          <div className="grid h-10 w-10 place-items-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground font-display text-lg font-semibold">
+            V
+          </div>
           <div>
-            <div className="font-display text-lg font-semibold leading-none tracking-tight">VAULT</div>
+            <div className="font-display text-lg font-semibold leading-none tracking-tight">
+              VAULT
+            </div>
+            <div className="mt-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-sidebar-foreground/60">
+              Personal Operating System
+            </div>
           </div>
         </div>
 
@@ -75,26 +103,32 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
             <span className="h-1.5 w-1.5 rounded-full bg-sidebar-primary" /> Private workspace
           </div>
           <h1 className="text-display text-5xl leading-[1.02]">
-            Command<br />of the quiet<br />things.
+            Command
+            <br />
+            of the quiet
+            <br />
+            things.
           </h1>
           <p className="mt-6 max-w-sm text-[15px] leading-relaxed text-sidebar-foreground/70">
-            Capital, commitments, calendars, and consumption — consolidated into a single instrument built for one operator.
+            Capital, commitments, calendars, and consumption — consolidated into a single
+            instrument built for one operator.
           </p>
         </div>
 
         <div className="relative flex items-end justify-between text-[11px] uppercase tracking-[0.18em] text-sidebar-foreground/50">
-          <span />
-          <span />
+          <span>Single tenant · Cloud sync</span>
+          <span className="tabular-nums">v2.0</span>
         </div>
       </div>
-
 
       {/* Right form */}
       <div className="flex items-center justify-center p-6 md:p-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 md:hidden">
             <div className="flex items-center gap-2">
-              <VaultLogo className="h-5 w-5 text-foreground" />
+              <div className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground font-serif">
+                V
+              </div>
               <span className="font-serif text-xl">Vault</span>
             </div>
           </div>
@@ -103,27 +137,58 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
             {mode === "signup" ? "Create your account" : "Welcome back"}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {mode === "signup" ? "A personal workspace, just for you." : "Sign in to continue."}
+            {mode === "signup"
+              ? "A personal workspace, just for you."
+              : "Sign in to continue."}
           </p>
 
           <form onSubmit={submit} className="mt-8 space-y-4">
             {mode === "signup" && (
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
-                <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="atinga" autoFocus />
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="atinga"
+                  autoFocus
+                  required
+                />
               </div>
             )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                autoFocus={mode === "signin"}
+                required
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={8}
+              />
             </div>
 
-            <Button type="submit" className="mt-2 w-full" size="lg">
-              {mode === "signup" ? "Create account" : "Sign in"}
+            <Button type="submit" className="mt-2 w-full" size="lg" disabled={busy}>
+              {busy
+                ? mode === "signup"
+                  ? "Creating account…"
+                  : "Signing in…"
+                : mode === "signup"
+                  ? "Create account"
+                  : "Sign in"}
             </Button>
           </form>
 
@@ -138,7 +203,7 @@ function AuthScreen({ hasUser }: { hasUser: boolean }) {
           </div>
 
           <p className="mt-10 text-center text-[11px] text-muted-foreground">
-            Data is stored locally on this device.
+            Your data is encrypted and synced securely.
           </p>
         </div>
       </div>
