@@ -136,5 +136,9 @@ export function uid(): string {
 
 /** @deprecated — auth is now handled by Supabase, not a local hash. */
 export function hashPwd(_s: string): string {
+
+export function clearAll() {
+  clearStore();
+}
   return "";
 }
