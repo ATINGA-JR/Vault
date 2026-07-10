@@ -141,5 +141,4 @@ export function hashPwd(_s: string): string {
 
 export function clearAll() {
   clearStore();
-}  return "";
 }
