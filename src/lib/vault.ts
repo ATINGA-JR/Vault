@@ -1,8 +1,9 @@
 // Zero-knowledge password vault. AES-GCM with PBKDF2-derived key.
-// The master password is never stored; only an encrypted blob lives in localStorage.
+// The master password never leaves the browser.
+// Only the encrypted blob (salt + iv + ciphertext) is stored in Supabase.
 import { useSyncExternalStore } from "react";
+import { supabase } from "./supabase";
 
-const KEY = "jarvis-vault/v1";
 const ITERATIONS = 250_000;
 
 export interface VaultEntry {
@@ -24,18 +25,18 @@ interface StoredBlob {
 }
 
 interface VaultState {
-  initialized: boolean;   // a blob exists in storage
-  unlocked: boolean;      // we have a key in memory
+  initialized: boolean; // a blob exists in Supabase
+  unlocked: boolean;    // we have a key in memory
   entries: VaultEntry[];
 }
 
+let vaultUserId: string | null = null;
 let key: CryptoKey | null = null;
 let salt: Uint8Array | null = null;
 let state: VaultState = { initialized: false, unlocked: false, entries: [] };
-let loaded = false;
 const listeners = new Set<() => void>();
 
-// ---------- base64 helpers ----------
+// ── base64 helpers ────────────────────────────────────────────
 function b64encode(buf: ArrayBuffer | Uint8Array): string {
   const bytes = buf instanceof Uint8Array ? buf : new Uint8Array(buf);
   let s = "";
@@ -49,28 +50,33 @@ function b64decode(s: string): Uint8Array {
   return out;
 }
 
-// ---------- storage ----------
-function readBlob(): StoredBlob | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as StoredBlob) : null;
-  } catch {
-    return null;
-  }
-}
-function writeBlob(b: StoredBlob) {
-  localStorage.setItem(KEY, JSON.stringify(b));
+// ── Supabase storage ──────────────────────────────────────────
+async function readBlobFromSupabase(): Promise<StoredBlob | null> {
+  if (!vaultUserId) return null;
+  const { data, error } = await supabase
+    .from("vault_blob")
+    .select("salt, iv, ct")
+    .eq("user_id", vaultUserId)
+    .single();
+  if (error || !data) return null;
+  return data as StoredBlob;
 }
 
-function loadOnce() {
-  if (loaded) return;
-  loaded = true;
-  const blob = readBlob();
-  state = { initialized: !!blob, unlocked: false, entries: [] };
+async function writeBlobToSupabase(blob: StoredBlob): Promise<void> {
+  if (!vaultUserId) throw new Error("Vault not initialized — no user ID.");
+  await supabase.from("vault_blob").upsert(
+    {
+      user_id: vaultUserId,
+      salt: blob.salt,
+      iv: blob.iv,
+      ct: blob.ct,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
 }
 
-// ---------- crypto ----------
+// ── crypto ────────────────────────────────────────────────────
 async function deriveKey(password: string, saltBytes: Uint8Array): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
     "raw",
@@ -89,14 +95,37 @@ async function deriveKey(password: string, saltBytes: Uint8Array): Promise<Crypt
 }
 
 async function encryptEntries(entries: VaultEntry[]): Promise<StoredBlob> {
-  if (!key || !salt) throw new Error("Vault locked");
+  if (!key || !salt) throw new Error("Vault is locked.");
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const plaintext = new TextEncoder().encode(JSON.stringify(entries));
-  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv as BufferSource }, key, plaintext as BufferSource);
+  const ct = await crypto.subtle.encrypt(
+    { name: "AES-GCM", iv: iv as BufferSource },
+    key,
+    plaintext as BufferSource,
+  );
   return { salt: b64encode(salt), iv: b64encode(iv), ct: b64encode(ct) };
 }
 
-// ---------- public API ----------
+// ── init / clear ──────────────────────────────────────────────
+
+/** Called from auth.tsx when the user signs in. */
+export async function initVault(userId: string) {
+  vaultUserId = userId;
+  const blob = await readBlobFromSupabase();
+  state = { initialized: !!blob, unlocked: false, entries: [] };
+  emit();
+}
+
+/** Called from auth.tsx when the user signs out. */
+export function clearVault() {
+  vaultUserId = null;
+  key = null;
+  salt = null;
+  state = { initialized: false, unlocked: false, entries: [] };
+  emit();
+}
+
+// ── public API ────────────────────────────────────────────────
 function emit() {
   listeners.forEach((l) => l());
 }
@@ -106,13 +135,13 @@ export async function createVault(password: string) {
   salt = crypto.getRandomValues(new Uint8Array(16));
   key = await deriveKey(password, salt);
   const blob = await encryptEntries([]);
-  writeBlob(blob);
+  await writeBlobToSupabase(blob);
   state = { initialized: true, unlocked: true, entries: [] };
   emit();
 }
 
 export async function unlockVault(password: string): Promise<boolean> {
-  const blob = readBlob();
+  const blob = await readBlobFromSupabase();
   if (!blob) return false;
   const saltBytes = b64decode(blob.salt);
   const candidate = await deriveKey(password, saltBytes);
@@ -142,7 +171,7 @@ export function lockVault() {
 
 async function persistEntries(next: VaultEntry[]) {
   const blob = await encryptEntries(next);
-  writeBlob(blob);
+  await writeBlobToSupabase(blob);
   state = { ...state, entries: next };
   emit();
 }
@@ -166,12 +195,14 @@ export async function changeMasterPassword(current: string, next: string) {
   salt = crypto.getRandomValues(new Uint8Array(16));
   key = await deriveKey(next, salt);
   const blob = await encryptEntries(state.entries);
-  writeBlob(blob);
+  await writeBlobToSupabase(blob);
   emit();
 }
 
-export function destroyVault() {
-  if (typeof window !== "undefined") localStorage.removeItem(KEY);
+export async function destroyVault() {
+  if (vaultUserId) {
+    await supabase.from("vault_blob").delete().eq("user_id", vaultUserId);
+  }
   key = null;
   salt = null;
   state = { initialized: false, unlocked: false, entries: [] };
@@ -184,16 +215,13 @@ export function useVault<T>(selector: (s: VaultState) => T): T {
       listeners.add(l);
       return () => listeners.delete(l);
     },
-    () => {
-      loadOnce();
-      return selector(state);
-    },
+    () => selector(state),
     () => selector({ initialized: false, unlocked: false, entries: [] }),
   );
 }
 
 export function vid(): string {
-  return Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
 
 // Password generator
