@@ -121,6 +121,7 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     date: r.date as string,
     time: (r.time as string | null) ?? undefined,
     color: r.color as string,
+    googleEventId: (r.google_event_id as string | null) ?? undefined,
     createdAt: r.created_at as string,
   }));
 
@@ -295,6 +296,7 @@ export async function syncEvents(userId: string, events: CalendarEvent[]) {
         date: e.date,
         time: e.time ?? null,
         color: e.color,
+        google_event_id: e.googleEventId ?? null,
         created_at: e.createdAt,
         updated_at: new Date().toISOString(),
       })),
