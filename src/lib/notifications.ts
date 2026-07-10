@@ -1,4 +1,4 @@
-import { getState, setState, uid } from "./store";
+import { getState, setState, uid, isStoreReady } from "./store";
 import { todayISO } from "./format";
 
 export function pushNotif(kind: "task" | "event" | "budget" | "weekly" | "system", title: string, body: string) {
@@ -11,7 +11,7 @@ export function pushNotif(kind: "task" | "event" | "budget" | "weekly" | "system
   }));
 }
 
-const SEEN_KEY = "jarvis-personal-os/seen-reminders/v1";
+const SEEN_KEY = "vault/seen-reminders/v1";
 
 function getSeen(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -27,15 +27,17 @@ function saveSeen(s: Set<string>) {
   localStorage.setItem(SEEN_KEY, JSON.stringify(Array.from(s)));
 }
 
-/** Run reminder checks for tasks/events/budget/weekly. Called on load + every few minutes. */
+/** Run reminder checks for tasks/events/budget/weekly. Called on load + every 5 min. */
 export function runReminders() {
+  // Only run once data has loaded from Supabase
+  if (!isStoreReady()) return;
+
   const s = getState();
-  if (!s.session) return;
   const seen = getSeen();
   const today = todayISO();
   const cfg = s.settings.notify;
 
-  // Tasks due today/overdue
+  // Tasks due today or overdue
   if (cfg.tasks) {
     for (const t of s.tasks) {
       if (t.done || !t.dueDate) continue;
@@ -65,7 +67,7 @@ export function runReminders() {
     }
   }
 
-  // Budget: spending > 80% of income (current month)
+  // Budget: spending > 80% of income this month
   if (cfg.budget) {
     const month = today.slice(0, 7);
     let income = 0, expense = 0;
@@ -83,11 +85,10 @@ export function runReminders() {
     }
   }
 
-  // Weekly summary — start of week (Monday)
+  // Weekly summary on Mondays
   if (cfg.weekly) {
     const d = new Date();
     if (d.getDay() === 1) {
-      // Monday
       const wk = today;
       if (s.lastWeeklySummary !== wk) {
         const pending = s.tasks.filter((t) => !t.done).length;
@@ -95,7 +96,11 @@ export function runReminders() {
           const diff = (new Date(e.date).getTime() - d.getTime()) / 86400000;
           return diff >= 0 && diff < 7;
         }).length;
-        pushNotif("weekly", "Your week ahead", `${pending} pending task${pending === 1 ? "" : "s"} · ${eventsThisWeek} event${eventsThisWeek === 1 ? "" : "s"} this week`);
+        pushNotif(
+          "weekly",
+          "Your week ahead",
+          `${pending} pending task${pending === 1 ? "" : "s"} · ${eventsThisWeek} event${eventsThisWeek === 1 ? "" : "s"} this week`,
+        );
         setState((st) => ({ ...st, lastWeeklySummary: wk }));
       }
     }
