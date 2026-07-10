@@ -1,88 +1,122 @@
 import { useSyncExternalStore } from "react";
-import { DEFAULT_DATA, type AppData, type Book, type BookStatus, type Watch, type WatchStatus } from "./types";
+import { DEFAULT_DATA, type AppData } from "./types";
+import * as db from "./db";
 
-const KEY = "jarvis-personal-os/v1";
-
+// ─────────────────────────────────────────────────────────────
+// Module-level state — single source of truth in memory
+// ─────────────────────────────────────────────────────────────
 let state: AppData = DEFAULT_DATA;
-let loaded = false;
+let currentUserId: string | null = null;
+let storeReady = false;
 const listeners = new Set<() => void>();
 
-function load() {
-  if (loaded) return;
-  loaded = true;
-  if (typeof window === "undefined") return;
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+// ─────────────────────────────────────────────────────────────
+// Auth lifecycle — called from auth.tsx on session change
+// ─────────────────────────────────────────────────────────────
+
+/** Load all user data from Supabase and populate in-memory state. */
+export async function initStore(userId: string) {
+  currentUserId = userId;
+  storeReady = false;
+
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<AppData>;
-      state = {
-        ...DEFAULT_DATA,
-        ...parsed,
-        books: migrateBooks(parsed.books),
-        watchlist: migrateWatchlist(parsed.watchlist),
-        settings: {
-          ...DEFAULT_DATA.settings,
-          ...(parsed.settings ?? {}),
-          notify: { ...DEFAULT_DATA.settings.notify, ...(parsed.settings?.notify ?? {}) },
-        },
-      };
-    }
-  } catch {
+    const data = await db.loadUserData(userId);
+    state = { ...DEFAULT_DATA, ...data };
+  } catch (err) {
+    console.error("[store] Failed to load from Supabase:", err);
     state = DEFAULT_DATA;
   }
-  // apply theme
-  if (state.settings.theme === "dark") document.documentElement.classList.add("dark");
-  else document.documentElement.classList.remove("dark");
+
+  storeReady = true;
+
+  // Apply saved theme immediately
+  if (state.settings.theme === "dark") {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+
+  notify();
 }
 
-function migrateBooks(books: any[] | undefined): Book[] {
-  return (books ?? []).map((b) => {
-    if (b && typeof b.status === "string") return b as Book;
-    const status: BookStatus = b?.read === true ? "read" : "to-read";
-    const { read: _, ...rest } = b ?? {};
-    return { ...rest, status } as Book;
-  });
+/** Reset in-memory state on sign-out. */
+export function clearStore() {
+  currentUserId = null;
+  storeReady = false;
+  state = DEFAULT_DATA;
+  notify();
 }
 
-function migrateWatchlist(watchlist: any[] | undefined): Watch[] {
-  return (watchlist ?? []).map((w) => {
-    if (w && typeof w.status === "string") return w as Watch;
-    const status: WatchStatus = w?.watched === true ? "watched" : "to-watch";
-    const { watched: _, ...rest } = w ?? {};
-    return { ...rest, status } as Watch;
-  });
+/** True once initStore has finished loading from Supabase. */
+export function isStoreReady(): boolean {
+  return storeReady;
 }
 
-function persist() {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(state));
-  } catch {}
+export function getCurrentUserId(): string | null {
+  return currentUserId;
 }
+
+// ─────────────────────────────────────────────────────────────
+// Core API — same signatures as the old localStorage store
+// ─────────────────────────────────────────────────────────────
 
 export function getState(): AppData {
-  load();
   return state;
 }
 
 export function setState(updater: (s: AppData) => AppData) {
-  load();
+  const old = state;
   state = updater(state);
-  persist();
-  listeners.forEach((l) => l());
+  notify();
+
+  // Background-sync only the slices that actually changed.
+  // Each sync is fire-and-forget; errors are logged, not thrown.
+  if (!currentUserId) return;
+  const uid = currentUserId;
+
+  if (old.tasks !== state.tasks)
+    db.syncTasks(uid, state.tasks).catch(console.error);
+
+  if (old.banks !== state.banks)
+    db.syncBanks(uid, state.banks).catch(console.error);
+
+  if (old.transactions !== state.transactions)
+    db.syncTransactions(uid, state.transactions).catch(console.error);
+
+  if (old.books !== state.books)
+    db.syncBooks(uid, state.books).catch(console.error);
+
+  if (old.watchlist !== state.watchlist)
+    db.syncWatchlist(uid, state.watchlist).catch(console.error);
+
+  if (old.events !== state.events)
+    db.syncEvents(uid, state.events).catch(console.error);
+
+  if (old.shoppingLists !== state.shoppingLists)
+    db.syncShoppingLists(uid, state.shoppingLists).catch(console.error);
+
+  if (old.notifications !== state.notifications)
+    db.syncNotifications(uid, state.notifications).catch(console.error);
+
+  if (old.settings !== state.settings || old.lastWeeklySummary !== state.lastWeeklySummary)
+    db.syncSettings(uid, state.settings, state.lastWeeklySummary).catch(console.error);
 }
 
-function subscribe(l: () => void) {
-  listeners.add(l);
+function subscribe(listener: () => void) {
+  listeners.add(listener);
   return () => {
-    listeners.delete(l);
+    listeners.delete(listener);
   };
 }
 
 export function useStore<T>(selector: (s: AppData) => T): T {
   return useSyncExternalStore(
     subscribe,
-    () => selector(getState()),
+    () => selector(state),
     () => selector(DEFAULT_DATA),
   );
 }
@@ -91,22 +125,16 @@ export function useAppData(): AppData {
   return useStore((s) => s);
 }
 
+// ─────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────
+
+/** Generate a valid UUID v4 for use as record IDs. */
 export function uid(): string {
-  return Math.random().toString(36).slice(2, 11) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
 
-// Simple password "hash" — local only, not real security
-export function hashPwd(s: string): string {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) h = ((h << 5) + h) ^ s.charCodeAt(i);
-  return (h >>> 0).toString(36);
-}
-
-export function clearAll() {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(KEY);
-  state = DEFAULT_DATA;
-  loaded = false;
-  load();
-  listeners.forEach((l) => l());
+/** @deprecated — auth is now handled by Supabase, not a local hash. */
+export function hashPwd(_s: string): string {
+  return "";
 }
