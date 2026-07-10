@@ -1,7 +1,7 @@
 import { createAPIFileRoute } from "@tanstack/react-start/api";
 import { exchangeCode, getGoogleEmail, adminSupabase } from "../../../lib/google.server";
 
-export const APIRoute = createAPIFileRoute("/api/google/callback")({
+export const Route = createAPIFileRoute("/api/google/callback")({
   GET: async ({ request }) => {
     const url = new URL(request.url);
     const code = url.searchParams.get("code");
