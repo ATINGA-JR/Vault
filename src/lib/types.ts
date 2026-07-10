@@ -1,11 +1,11 @@
-// All data types for Jarvis Personal OS
+// All data types for Vault Personal OS
 
 export type ID = string;
 
 export interface User {
   username: string;
   email: string;
-  passwordHash: string; // simple hash, local only
+  passwordHash: string; // kept for type compat, no longer used
   createdAt: string;
 }
 
@@ -52,22 +52,20 @@ export interface Transaction {
   createdAt: string;
 }
 
-export type BookStatus = "to-read" | "reading" | "read";
 export interface Book {
   id: ID;
   title: string;
   author: string;
-  status: BookStatus;
+  read: boolean;
   createdAt: string;
 }
 
 export type WatchType = "movie" | "series";
-export type WatchStatus = "to-watch" | "watching" | "watched";
 export interface Watch {
   id: ID;
   title: string;
   type: WatchType;
-  status: WatchStatus;
+  watched: boolean;
   createdAt: string;
 }
 
@@ -86,6 +84,7 @@ export interface CalendarEvent {
   date: string; // YYYY-MM-DD
   time?: string; // HH:mm
   color: string;
+  googleEventId?: string; // set when this event is linked to Google Calendar
   createdAt: string;
 }
 
