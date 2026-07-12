@@ -65,6 +65,7 @@ export interface Watch {
   id: ID;
   title: string;
   type: WatchType;
+  year?: number;
   watched: boolean;
   createdAt: string;
 }
