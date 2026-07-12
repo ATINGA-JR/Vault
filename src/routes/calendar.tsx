@@ -75,11 +75,11 @@ function CalendarPage() {
 
   // Handle redirect back from Google OAuth
   useEffect(() => {
-    if (google_connected === "true") {
+    if (google_connected === "1") {
       toast.success("Google Calendar connected!");
       if (user) doSync(user.id, true);
     }
-    if (google_error) {
+    if (google_error === "1") {
       toast.error("Failed to connect Google Calendar. Please try again.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
