@@ -111,6 +111,7 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     id: r.id as string,
     title: r.title as string,
     type: r.type as Watch["type"],
+    year: (r.year as number | null) ?? undefined,
     watched: r.watched as boolean,
     createdAt: r.created_at as string,
   }));
@@ -277,6 +278,7 @@ export async function syncWatchlist(userId: string, watchlist: Watch[]) {
         user_id: userId,
         title: w.title,
         type: w.type,
+        year: w.year ?? null,
         watched: w.watched,
         created_at: w.createdAt,
       })),
