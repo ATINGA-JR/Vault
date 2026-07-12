@@ -145,12 +145,11 @@ function CalendarPage() {
                 <RefreshCw className={cn("mr-1 h-3.5 w-3.5", syncing && "animate-spin")} />
                 {syncing ? "Syncing…" : "Sync Google"}
               </Button>
-            ) : (
-              <Button size="sm" variant="outline" onClick={connectGoogle}>
-                <img src="https://www.google.com/favicon.ico" className="mr-1.5 h-3.5 w-3.5" alt="" />
-                Connect Google
-              </Button>
-            )}
+            ) : null}
+            <Button size="sm" variant="outline" onClick={connectGoogle}>
+              <img src="https://www.google.com/favicon.ico" className="mr-1.5 h-3.5 w-3.5" alt="" />
+              {hasGoogle ? "+ Add account" : "Connect Google"}
+            </Button>
             <Button size="sm" onClick={() => { setAddDate(selected ?? today); setOpenAdd(true); }}>
               <Plus className="mr-1 h-4 w-4" />Add event
             </Button>
