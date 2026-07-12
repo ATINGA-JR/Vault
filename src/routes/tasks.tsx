@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Trash2, X, Calendar as CalIcon } from "lucide-react";
+import { Plus, Trash2, Calendar as CalIcon } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { AuthGate } from "@/components/app/AuthGate";
 import { PageHeader, Section, EmptyState } from "@/components/app/ui-bits";
 import { useStore, setState, uid } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { weekDays, toISODate, DAY_LABEL, MONTH_LABEL, todayISO, formatDateLong, addDays, startOfWeek } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -13,8 +14,11 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import type { Priority, Task } from "@/lib/types";
+import { Switch } from "@/components/ui/switch";
+import type { Priority, Task, CalendarEvent } from "@/lib/types";
+import { EVENT_COLORS } from "@/lib/types";
 import { toast } from "sonner";
+import { pushVaultEventToGoogle } from "@/lib/api/google.functions";
 
 export const Route = createFileRoute("/tasks")({
   head: () => ({ meta: [{ title: "Tasks — Vault" }] }),
@@ -187,25 +191,84 @@ export function TaskRow({ task, onAfter }: { task: Task; onAfter?: () => void })
   );
 }
 
+// Helper: create a calendar event from a task and optionally push to Google
+async function addTaskToCalendar(
+  taskId: string,
+  text: string,
+  dueDate: string,
+  dueTime: string | undefined,
+  userId: string | undefined,
+  hasGoogle: boolean,
+) {
+  const eventId = uid();
+  const newEvent: CalendarEvent = {
+    id: eventId,
+    name: text,
+    date: dueDate,
+    time: dueTime,
+    color: EVENT_COLORS[2], // dusk blue for task-sourced events
+    createdAt: new Date().toISOString(),
+  };
+  setState((s) => ({ ...s, events: [...s.events, newEvent] }));
+
+  if (hasGoogle && userId) {
+    pushVaultEventToGoogle({
+      data: { userId, eventId, name: text, date: dueDate, time: dueTime },
+    }).then(({ googleEventId }) => {
+      if (googleEventId) {
+        setState((s) => ({
+          ...s,
+          events: s.events.map((e) => e.id === eventId ? { ...e, googleEventId } : e),
+        }));
+      }
+    }).catch(console.error);
+  }
+}
+
 function QuickAddTask({ defaultDate }: { defaultDate?: string }) {
+  const { user } = useAuth();
+  const googleTokens = useStore((s) => s.events); // just to trigger re-render
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [dueDate, setDueDate] = useState(defaultDate ?? "");
   const [dueTime, setDueTime] = useState("");
+  const [addToCalendar, setAddToCalendar] = useState(false);
 
-  function submit(e: React.FormEvent) {
+  // Check if user has Google connected
+  const hasGoogle = useStore((s) =>
+    s.events.some((e) => e.googleEventId)
+  );
+
+  // Use a simpler check — just try to push and it'll be a no-op if not connected
+  const canSyncGoogle = !!user;
+
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
+    const taskId = uid();
     setState((s) => ({
       ...s,
       tasks: [
         ...s.tasks,
-        { id: uid(), text: text.trim(), priority, dueDate: dueDate || undefined, dueTime: dueTime || undefined, done: false, createdAt: new Date().toISOString() },
+        {
+          id: taskId,
+          text: text.trim(),
+          priority,
+          dueDate: dueDate || undefined,
+          dueTime: dueTime || undefined,
+          done: false,
+          createdAt: new Date().toISOString(),
+        },
       ],
     }));
-    toast.success("Task added");
-    setText(""); setDueDate(defaultDate ?? ""); setDueTime("");
+
+    if (addToCalendar && dueDate) {
+      await addTaskToCalendar(taskId, text.trim(), dueDate, dueTime || undefined, user?.id, canSyncGoogle);
+    }
+
+    toast.success(addToCalendar && dueDate ? "Task added and synced to calendar" : "Task added");
+    setText(""); setDueDate(defaultDate ?? ""); setDueTime(""); setAddToCalendar(false);
     setOpen(false);
   }
 
@@ -241,6 +304,19 @@ function QuickAddTask({ defaultDate }: { defaultDate?: string }) {
                 <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
               </div>
             </div>
+
+            {dueDate && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                <div>
+                  <div className="text-sm font-medium">Add to calendar</div>
+                  <div className="text-xs text-muted-foreground">
+                    Creates a calendar event on {dueDate}{canSyncGoogle ? " and syncs to Google" : ""}
+                  </div>
+                </div>
+                <Switch checked={addToCalendar} onCheckedChange={setAddToCalendar} />
+              </div>
+            )}
+
             <Button type="submit" className="w-full">Add task</Button>
           </form>
         </DialogContent>
@@ -250,25 +326,42 @@ function QuickAddTask({ defaultDate }: { defaultDate?: string }) {
 }
 
 function DayModal({ isoDate, onClose }: { isoDate: string | null; onClose: () => void }) {
+  const { user } = useAuth();
   const tasks = useStore((s) => s.tasks);
   const events = useStore((s) => s.events);
   const [text, setText] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [time, setTime] = useState("");
+  const [addToCalendar, setAddToCalendar] = useState(false);
+  const canSyncGoogle = !!user;
 
   if (!isoDate) return null;
   const dt = tasks.filter((t) => t.dueDate === isoDate).sort(sortTask);
   const evs = events.filter((e) => e.date === isoDate);
 
-  function add(e: React.FormEvent) {
+  async function add(e: React.FormEvent) {
     e.preventDefault();
     if (!text.trim()) return;
+    const taskId = uid();
     setState((s) => ({
       ...s,
-      tasks: [...s.tasks, { id: uid(), text: text.trim(), priority, dueDate: isoDate!, dueTime: time || undefined, done: false, createdAt: new Date().toISOString() }],
+      tasks: [...s.tasks, {
+        id: taskId,
+        text: text.trim(),
+        priority,
+        dueDate: isoDate!,
+        dueTime: time || undefined,
+        done: false,
+        createdAt: new Date().toISOString(),
+      }],
     }));
-    toast.success("Task added");
-    setText(""); setTime("");
+
+    if (addToCalendar) {
+      await addTaskToCalendar(taskId, text.trim(), isoDate!, time || undefined, user?.id, canSyncGoogle);
+    }
+
+    toast.success(addToCalendar ? "Task added and synced to calendar" : "Task added");
+    setText(""); setTime(""); setAddToCalendar(false);
   }
 
   return (
@@ -315,6 +408,15 @@ function DayModal({ isoDate, onClose }: { isoDate: string | null; onClose: () =>
             </Select>
             <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-32" />
             <Button type="submit" className="flex-1">Add</Button>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Add to calendar</div>
+              <div className="text-xs text-muted-foreground">
+                Also creates a calendar event{canSyncGoogle ? " and syncs to Google" : ""}
+              </div>
+            </div>
+            <Switch checked={addToCalendar} onCheckedChange={setAddToCalendar} />
           </div>
         </form>
       </DialogContent>
