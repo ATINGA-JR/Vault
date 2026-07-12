@@ -26,6 +26,10 @@ import {
 
 export const Route = createFileRoute("/calendar")({
   head: () => ({ meta: [{ title: "Calendar — Vault" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    google_connected: (search.google_connected as string) ?? "",
+    google_error: (search.google_error as string) ?? "",
+  }),
   component: () => (
     <AuthGate>
       <AppShell>
@@ -67,20 +71,19 @@ function CalendarPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
+  const { google_connected, google_error } = Route.useSearch();
+
   // Handle redirect back from Google OAuth
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("google_connected") === "true") {
+    if (google_connected === "true") {
       toast.success("Google Calendar connected!");
-      window.history.replaceState({}, "", "/calendar");
       if (user) doSync(user.id, true);
     }
-    if (params.get("google_error")) {
+    if (google_error) {
       toast.error("Failed to connect Google Calendar. Please try again.");
-      window.history.replaceState({}, "", "/calendar");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [google_connected, google_error, user?.id]);
 
   async function doSync(userId: string, showToast = true) {
     setSyncing(true);
