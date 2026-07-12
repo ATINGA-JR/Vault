@@ -3,7 +3,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { exchangeCode, getGoogleEmail, adminSupabase } from "@/lib/google.server";
 
-// Server function that handles the OAuth token exchange
 const handleGoogleCallback = createServerFn({ method: "GET" })
   .inputValidator(z.object({ code: z.string(), state: z.string() }))
   .handler(async ({ data }) => {
@@ -25,26 +24,32 @@ const handleGoogleCallback = createServerFn({ method: "GET" })
         { onConflict: "user_id,google_email" },
       );
 
-      throw redirect({ to: "/calendar", search: { google_connected: "true" } });
+      return { ok: true, error: null };
     } catch (err) {
-      // Re-throw redirects
-      if (err && typeof err === "object" && "to" in err) throw err;
       console.error("[google-callback] error:", err);
-      throw redirect({ to: "/calendar", search: { google_error: "true" } });
+      return { ok: false, error: String(err) };
     }
   });
 
+// TanStack Router parses search params into an object — use validateSearch
+// to type them properly, then read via Route.useSearch() in the component.
 export const Route = createFileRoute("/google-callback")({
   head: () => ({ meta: [{ title: "Connecting Google Calendar…" }] }),
-  beforeLoad: async ({ location }) => {
-    const code = new URLSearchParams(location.search as string).get("code");
-    const state = new URLSearchParams(location.search as string).get("state");
-
+  validateSearch: (search: Record<string, unknown>) => ({
+    code: (search.code as string) ?? "",
+    state: (search.state as string) ?? "",
+  }),
+  beforeLoad: async ({ search }) => {
+    const { code, state } = search;
     if (!code || !state) {
       throw redirect({ to: "/calendar", search: { google_error: "true" } });
     }
-
-    await handleGoogleCallback({ data: { code, state } });
+    const result = await handleGoogleCallback({ data: { code, state } });
+    if (result.ok) {
+      throw redirect({ to: "/calendar", search: { google_connected: "true" } });
+    } else {
+      throw redirect({ to: "/calendar", search: { google_error: "true" } });
+    }
   },
   component: () => (
     <div className="flex min-h-screen items-center justify-center bg-background">
