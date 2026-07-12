@@ -43,24 +43,18 @@ function GoogleCallbackPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Google returned an error (e.g. user denied access)
-    if (oauthError) {
-      navigate({ to: "/calendar", search: { google_error: "true" } });
-      return;
-    }
-
-    if (!code || !state) {
-      navigate({ to: "/calendar", search: { google_error: "true" } });
+    if (oauthError || !code || !state) {
+      navigate({ to: "/calendar", search: { google_error: "1" } });
       return;
     }
 
     handleGoogleCallback({ data: { code, state } })
       .then(() => {
-        navigate({ to: "/calendar", search: { google_connected: "true" } });
+        navigate({ to: "/calendar", search: { google_connected: "1" } });
       })
       .catch((err) => {
         console.error("[google-callback]", err);
-        navigate({ to: "/calendar", search: { google_error: "true" } });
+        navigate({ to: "/calendar", search: { google_error: "1" } });
       });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
