@@ -163,10 +163,10 @@ export async function pushEventToGoogle(
   const body = {
     summary: event.name,
     start: event.time
-      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "UTC" }
+      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "Africa/Lagos" }
       : { date: event.date },
     end: event.time
-      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "UTC" }
+      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "Africa/Lagos" }
       : { date: event.date },
   };
   const r = await fetch(
@@ -192,10 +192,10 @@ export async function updateGoogleEvent(
   const body = {
     summary: event.name,
     start: event.time
-      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "UTC" }
+      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "Africa/Lagos" }
       : { date: event.date },
     end: event.time
-      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "UTC" }
+      ? { dateTime: `${event.date}T${event.time}:00`, timeZone: "Africa/Lagos" }
       : { date: event.date },
   };
   await fetch(
