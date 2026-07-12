@@ -12,46 +12,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import type { WatchType, WatchStatus } from "@/lib/types";
+import type { WatchType } from "@/lib/types";
 
 export const Route = createFileRoute("/watch")({
   head: () => ({ meta: [{ title: "Watch List — Vault" }] }),
   component: () => (<AuthGate><AppShell><WatchPage /></AppShell></AuthGate>),
 });
 
-const nextWatchStatus = (status: WatchStatus): WatchStatus => {
-  if (status === "to-watch") return "watching";
-  if (status === "watching") return "watched";
-  return "to-watch";
-};
-
-function statusLabel(status: WatchStatus) {
-  return status === "to-watch" ? "to watch" : status;
-}
-
 function WatchPage() {
   const watchlist = useStore((s) => s.watchlist);
-  const watched = watchlist.filter((w) => w.status === "watched").length;
-  const watching = watchlist.filter((w) => w.status === "watching").length;
-  const togo = watchlist.filter((w) => w.status === "to-watch").length;
+  const watched = watchlist.filter((w) => w.watched).length;
+  const togo = watchlist.length - watched;
   const [tab, setTab] = useState("all");
-  const filtered = tab === "all"
-    ? watchlist
-    : tab === "todo"
-      ? watchlist.filter((w) => w.status === "to-watch")
-      : tab === "watching"
-        ? watchlist.filter((w) => w.status === "watching")
-        : watchlist.filter((w) => w.status === "watched");
+  const filtered = tab === "all" ? watchlist : tab === "todo" ? watchlist.filter((w) => !w.watched) : watchlist.filter((w) => w.watched);
 
   return (
     <>
       <PageHeader eyebrow="Watch List" title="What to watch."
-        subtitle={`${watched} watched · ${watching} watching · ${togo} to go`} action={<AddWatch />} />
+        subtitle={`${watched} watched · ${togo} to go`} action={<AddWatch />} />
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="todo">To Watch</TabsTrigger>
-          <TabsTrigger value="watching">Watching</TabsTrigger>
           <TabsTrigger value="watched">Watched</TabsTrigger>
         </TabsList>
         <TabsContent value={tab} className="mt-6">
@@ -65,16 +47,15 @@ function WatchPage() {
                     {w.type === "movie" ? <Film className="h-5 w-5" /> : <Tv className="h-5 w-5" />}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <div className={cn("truncate font-serif text-lg", w.status === "watched" && "text-muted-foreground line-through")}>{w.title}</div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{w.type} · {statusLabel(w.status)}</div>
+                    <div className={cn("truncate font-serif text-lg", w.watched && "text-muted-foreground line-through")}>{w.title}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {w.type}{w.year ? ` · ${w.year}` : ""}
+                    </div>
                   </div>
-                  <button
-                    title={`Status: ${statusLabel(w.status)}. Click to advance.`}
-                    onClick={() => setState((s) => ({ ...s, watchlist: s.watchlist.map((x) => x.id === w.id ? { ...x, status: nextWatchStatus(x.status) } : x) }))}
+                  <button onClick={() => setState((s) => ({ ...s, watchlist: s.watchlist.map((x) => x.id === w.id ? { ...x, watched: !x.watched } : x) }))}
                     className={cn("grid h-6 w-6 place-items-center rounded border",
-                      w.status === "watched" ? "border-primary bg-primary text-primary-foreground" : "border-border-strong")}>
-                    {w.status === "watching" && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
-                    {w.status === "watched" && <span className="text-[10px]">✓</span>}
+                      w.watched ? "border-primary bg-primary text-primary-foreground" : "border-border-strong")}>
+                    {w.watched && <span className="text-[10px]">✓</span>}
                   </button>
                   <button onClick={() => { setState((s) => ({ ...s, watchlist: s.watchlist.filter((x) => x.id !== w.id) })); toast.success("Removed"); }}
                     className="text-muted-foreground hover:text-destructive">
@@ -92,13 +73,28 @@ function WatchPage() {
 
 function AddWatch() {
   const [open, setOpen] = useState(false);
-  const [title, setTitle] = useState(""); const [type, setType] = useState<WatchType>("movie");
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<WatchType>("movie");
+  const [year, setYear] = useState("");
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
-    setState((s) => ({ ...s, watchlist: [...s.watchlist, { id: uid(), title: title.trim(), type, status: "to-watch" as WatchStatus, createdAt: new Date().toISOString() }] }));
-    toast.success("Added"); setTitle(""); setOpen(false);
+    setState((s) => ({
+      ...s,
+      watchlist: [...s.watchlist, {
+        id: uid(),
+        title: title.trim(),
+        type,
+        year: year ? parseInt(year) : undefined,
+        watched: false,
+        createdAt: new Date().toISOString(),
+      }],
+    }));
+    toast.success("Added");
+    setTitle(""); setYear(""); setOpen(false);
   }
+
   return (
     <>
       <Button onClick={() => setOpen(true)} size="sm"><Plus className="mr-1 h-4 w-4" />Add title</Button>
@@ -106,7 +102,21 @@ function AddWatch() {
         <DialogContent>
           <DialogHeader><DialogTitle className="font-serif text-2xl">Add to watchlist</DialogTitle></DialogHeader>
           <form onSubmit={submit} className="space-y-4">
-            <div className="space-y-2"><Label>Title</Label><Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Year</Label>
+              <Input
+                type="number"
+                placeholder={new Date().getFullYear().toString()}
+                value={year}
+                onChange={(e) => setYear(e.target.value)}
+                min="1900"
+                max="2099"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-2">
               {(["movie", "series"] as const).map((t) => (
                 <button key={t} type="button" onClick={() => setType(t)}
