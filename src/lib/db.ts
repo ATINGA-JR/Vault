@@ -103,6 +103,7 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     id: r.id as string,
     title: r.title as string,
     author: r.author as string,
+    reading: (r.reading as boolean) ?? false,
     read: r.read as boolean,
     createdAt: r.created_at as string,
   }));
@@ -262,6 +263,7 @@ export async function syncBooks(userId: string, books: Book[]) {
         user_id: userId,
         title: b.title,
         author: b.author,
+        reading: b.reading,
         read: b.read,
         created_at: b.createdAt,
       })),
