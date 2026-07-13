@@ -56,6 +56,7 @@ export interface Book {
   id: ID;
   title: string;
   author: string;
+  reading: boolean;
   read: boolean;
   createdAt: string;
 }
