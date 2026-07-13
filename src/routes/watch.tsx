@@ -66,10 +66,10 @@ function WatchPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="todo">To Watch</TabsTrigger>
           <TabsTrigger value="watching">
             Watching {watching > 0 && <span className="ml-1 rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{watching}</span>}
           </TabsTrigger>
-          <TabsTrigger value="todo">To Watch</TabsTrigger>
           <TabsTrigger value="watched">Watched</TabsTrigger>
         </TabsList>
 
