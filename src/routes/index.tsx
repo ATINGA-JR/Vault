@@ -3,12 +3,13 @@ import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ListTodo, Wallet, BookOpen, Film, ShoppingCart, CalendarDays,
-  ArrowUpRight, TrendingUp, TrendingDown, Plus,
+  ArrowUpRight, TrendingUp, TrendingDown,
 } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { AuthGate } from "@/components/app/AuthGate";
 import { PageHeader, Section, StatCard, EmptyState } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
+import { useAuth } from "@/lib/auth";
 import { formatNaira, greeting, formatDateLong, todayISO } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -25,6 +26,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Dashboard() {
+  const { username } = useAuth();
   const tasks = useStore((s) => s.tasks);
   const transactions = useStore((s) => s.transactions);
   const banks = useStore((s) => s.banks);
@@ -32,7 +34,6 @@ function Dashboard() {
   const watchlist = useStore((s) => s.watchlist);
   const events = useStore((s) => s.events);
   const shoppingLists = useStore((s) => s.shoppingLists);
-  const user = useStore((s) => s.user);
 
   const stats = useMemo(() => {
     const month = todayISO().slice(0, 7);
@@ -53,8 +54,8 @@ function Dashboard() {
     return {
       pendingTasks: tasks.filter((t) => !t.done).length,
       income, expense, balance: income - expense,
-      booksToRead: books.filter((b) => b.status === "to-read").length,
-      moviesToWatch: watchlist.filter((w) => w.status === "to-watch").length,
+      booksToRead: books.filter((b) => !b.read).length,
+      moviesToWatch: watchlist.filter((w) => !w.watched).length,
       shoppingLists: shoppingLists.length,
       pendingShopping,
       upcoming,
@@ -67,15 +68,15 @@ function Dashboard() {
     .slice(0, 5);
 
   const recentTx = [...transactions].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)).slice(0, 3);
-  const nextBook = books.find((b) => b.status === "to-read");
-  const nextMovie = watchlist.find((w) => w.status === "to-watch");
+  const nextBook = books.find((b) => !b.read);
+  const nextMovie = watchlist.find((w) => !w.watched);
   const incomePct = stats.income > 0 ? Math.min(100, (stats.expense / stats.income) * 100) : 0;
 
   return (
     <>
       <PageHeader
         eyebrow={formatDateLong(new Date())}
-        title={`${greeting()}, ${user?.username ?? ""}.`}
+        title={`${greeting()}, ${username ?? ""}.`}
         subtitle="Here's everything on your plate today."
       />
 
