@@ -60,7 +60,7 @@ function WatchPage() {
       <PageHeader
         eyebrow="Watch List"
         title="What to watch."
-        subtitle={`${watching} watching · ${togo} to go · ${watched} watched`}
+        subtitle={`${watched} watched · ${watching} watching · ${togo} to go`}
         action={<AddWatch />}
       />
       <Tabs value={tab} onValueChange={setTab}>
