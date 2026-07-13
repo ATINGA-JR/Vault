@@ -54,8 +54,10 @@ function Dashboard() {
     return {
       pendingTasks: tasks.filter((t) => !t.done).length,
       income, expense, balance: income - expense,
-      booksToRead: books.filter((b) => !b.read).length,
-      moviesToWatch: watchlist.filter((w) => !w.watched).length,
+      booksToRead: books.filter((b) => !b.read && !b.reading).length,
+      booksReading: books.filter((b) => b.reading && !b.read).length,
+      moviesToWatch: watchlist.filter((w) => !w.watched && !w.watching).length,
+      moviesWatching: watchlist.filter((w) => w.watching && !w.watched).length,
       shoppingLists: shoppingLists.length,
       pendingShopping,
       upcoming,
@@ -68,8 +70,9 @@ function Dashboard() {
     .slice(0, 5);
 
   const recentTx = [...transactions].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)).slice(0, 3);
-  const nextBook = books.find((b) => !b.read);
-  const nextMovie = watchlist.find((w) => !w.watched);
+  // Prioritise currently reading/watching, then fall back to first in queue
+  const currentBook = books.find((b) => b.reading && !b.read) ?? books.find((b) => !b.read);
+  const currentMovie = watchlist.find((w) => w.watching && !w.watched) ?? watchlist.find((w) => !w.watched);
   const incomePct = stats.income > 0 ? Math.min(100, (stats.expense / stats.income) * 100) : 0;
 
   return (
@@ -84,8 +87,22 @@ function Dashboard() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
           <Link to="/tasks"><StatCard label="Pending Tasks" value={stats.pendingTasks} hint="To do" /></Link>
           <Link to="/cash-flow"><StatCard label="Net Balance" value={formatNaira(stats.balance)} hint="This month" accent /></Link>
-          <Link to="/reading"><StatCard label="Books" value={stats.booksToRead} hint="To read" /></Link>
-          <Link to="/watch"><StatCard label="Watchlist" value={stats.moviesToWatch} hint="To watch" /></Link>
+          <Link to="/reading">
+            <StatCard
+              label="Books"
+              value={stats.booksReading > 0 ? stats.booksReading : stats.booksToRead}
+              hint={stats.booksReading > 0 ? "Reading now" : "To read"}
+              accent={stats.booksReading > 0}
+            />
+          </Link>
+          <Link to="/watch">
+            <StatCard
+              label="Watchlist"
+              value={stats.moviesWatching > 0 ? stats.moviesWatching : stats.moviesToWatch}
+              hint={stats.moviesWatching > 0 ? "Watching now" : "To watch"}
+              accent={stats.moviesWatching > 0}
+            />
+          </Link>
           <Link to="/shopping"><StatCard label="Shopping" value={stats.pendingShopping} hint={`${stats.shoppingLists} list${stats.shoppingLists === 1 ? "" : "s"}`} /></Link>
           <Link to="/calendar"><StatCard label="Upcoming" value={stats.upcoming.length} hint="Next 2 weeks" /></Link>
         </div>
@@ -194,24 +211,34 @@ function Dashboard() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Section title="Up next" subtitle="Book">
-          {nextBook ? (
+          {currentBook ? (
             <div className="rounded-lg border border-border bg-card p-5">
               <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-primary/20 to-primary/5 font-serif text-2xl">
                 <BookOpen className="h-5 w-5 text-primary" />
               </div>
-              <div className="mt-3 font-serif text-lg">{nextBook.title}</div>
-              <div className="text-xs text-muted-foreground">{nextBook.author}</div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="font-serif text-lg">{currentBook.title}</span>
+                {currentBook.reading && (
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Reading</span>
+                )}
+              </div>
+              <div className="text-xs text-muted-foreground">{currentBook.author}</div>
             </div>
           ) : <EmptyState icon={<BookOpen className="h-5 w-5" />} title="No books queued." />}
         </Section>
         <Section title="Up next" subtitle="Watch">
-          {nextMovie ? (
+          {currentMovie ? (
             <div className="rounded-lg border border-border bg-card p-5">
               <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-chart-3/20 to-chart-3/5">
                 <Film className="h-5 w-5 text-info" />
               </div>
-              <div className="mt-3 font-serif text-lg">{nextMovie.title}</div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">{nextMovie.type}</div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="font-serif text-lg">{currentMovie.title}</span>
+                {currentMovie.watching && (
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Watching</span>
+                )}
+              </div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{currentMovie.type}{currentMovie.year ? ` · ${currentMovie.year}` : ""}</div>
             </div>
           ) : <EmptyState icon={<Film className="h-5 w-5" />} title="Nothing on the watchlist." />}
         </Section>
