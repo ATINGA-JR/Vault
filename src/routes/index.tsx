@@ -84,9 +84,9 @@ function Dashboard() {
       />
 
       <Section>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <Link to="/tasks"><StatCard label="Pending Tasks" value={stats.pendingTasks} hint="To do" /></Link>
-          <Link to="/cash-flow"><StatCard label="Net Balance" value={formatNaira(stats.balance)} hint="This month" accent /></Link>
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-6">
+          <Link to="/tasks"><StatCard label="Tasks" value={stats.pendingTasks} hint="Pending" /></Link>
+          <Link to="/cash-flow"><StatCard label="Balance" value={formatNaira(stats.balance)} hint="This month" accent /></Link>
           <Link to="/reading">
             <StatCard
               label="Books"
