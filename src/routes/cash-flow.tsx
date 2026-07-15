@@ -31,7 +31,10 @@ function CashFlowPage() {
 
   const filtered = activeBank === "all" ? transactions : transactions.filter((t) => t.bankId === activeBank || t.fromBankId === activeBank || t.toBankId === activeBank);
 
-  const totals = useMemo(() => agg(filtered), [filtered]);
+  const totals = useMemo(
+    () => agg(filtered, activeBank === "all" ? undefined : activeBank),
+    [filtered, activeBank],
+  );
 
   return (
     <>
@@ -63,7 +66,7 @@ function CashFlowPage() {
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
           <StatCard label="Income" value={formatNaira(totals.income)} />
           <StatCard label="Expense" value={formatNaira(totals.expense)} />
-          <StatCard label="Net" value={formatNaira(totals.income - totals.expense)} accent />
+          <StatCard label="Net" value={formatNaira(totals.income - totals.expense + totals.intraIn - totals.intraOut)} accent />
           <StatCard label="Transactions" value={totals.count} />
         </div>
         <div className="mt-4 rounded-lg border border-border bg-card p-5">
@@ -92,13 +95,19 @@ function CashFlowPage() {
 }
 
 function agg(tx: Transaction[], bankId?: string) {
-  let income = 0, expense = 0, intra = 0;
+  let income = 0, expense = 0, intra = 0, intraIn = 0, intraOut = 0;
   for (const t of tx) {
     if (t.type === "income") income += t.amount;
     else if (t.type === "expense") expense += t.amount;
-    else if (t.type === "intra") intra += t.amount;
+    else if (t.type === "intra") {
+      intra += t.amount;
+      if (bankId) {
+        if (t.toBankId === bankId) intraIn += t.amount;
+        if (t.fromBankId === bankId) intraOut += t.amount;
+      }
+    }
   }
-  return { income, expense, intra, count: tx.length };
+  return { income, expense, intra, intraIn, intraOut, count: tx.length };
 }
 
 function BankFilter({ banks, value, onChange }: { banks: Bank[]; value: string; onChange: (v: string) => void }) {
@@ -114,7 +123,11 @@ function BankFilter({ banks, value, onChange }: { banks: Bank[]; value: string; 
 }
 
 function BankCard({ bank, active, onClick, totals }: { bank: Bank | null; active: boolean; onClick: () => void; totals: ReturnType<typeof agg> }) {
-  const balance = totals.income - totals.expense;
+  // For "All Accounts": intra transfers net to zero, so exclude them entirely.
+  // For a specific bank: intraIn credits the balance, intraOut debits it.
+  const balance = bank
+    ? totals.income - totals.expense + totals.intraIn - totals.intraOut
+    : totals.income - totals.expense;
   const max = Math.max(totals.income, totals.expense, 1);
   const pct = (totals.expense / max) * 100;
   return (
