@@ -368,7 +368,7 @@ function DayModal({ isoDate, onClose }: { isoDate: string | null; onClose: () =>
     <Dialog open={!!isoDate} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">{formatDateLong(isoDate)}</DialogTitle>
+          <DialogTitle className="font-serif text-xl sm:text-2xl">{formatDateLong(isoDate)}</DialogTitle>
         </DialogHeader>
 
         {evs.length > 0 && (
@@ -376,8 +376,8 @@ function DayModal({ isoDate, onClose }: { isoDate: string | null; onClose: () =>
             <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Calendar events</div>
             <div className="space-y-1">
               {evs.map((e) => (
-                <div key={e.id} className="rounded-md px-3 py-2 text-sm italic" style={{ background: e.color + "20", color: e.color }}>
-                  <CalIcon className="mr-1.5 inline h-3.5 w-3.5" />{e.name}{e.time ? ` · ${e.time}` : ""}
+                <div key={e.id} className="break-words rounded-md px-3 py-2 text-sm italic" style={{ background: e.color + "20", color: e.color }}>
+                  <CalIcon className="mr-1.5 inline h-3.5 w-3.5 shrink-0" />{e.name}{e.time ? ` · ${e.time}` : ""}
                 </div>
               ))}
             </div>
@@ -397,20 +397,20 @@ function DayModal({ isoDate, onClose }: { isoDate: string | null; onClose: () =>
 
         <form onSubmit={add} className="mt-2 space-y-3 border-t border-border pt-4">
           <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="Add a task for this day…" />
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <Select value={priority} onValueChange={(v) => setPriority(v as Priority)}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="sm:w-32"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="high">High</SelectItem>
                 <SelectItem value="medium">Medium</SelectItem>
                 <SelectItem value="low">Low</SelectItem>
               </SelectContent>
             </Select>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-32" />
-            <Button type="submit" className="flex-1">Add</Button>
+            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="sm:w-32" />
+            <Button type="submit" className="col-span-2 sm:flex-1">Add</Button>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2">
-            <div>
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+            <div className="min-w-0">
               <div className="text-sm font-medium">Add to calendar</div>
               <div className="text-xs text-muted-foreground">
                 Also creates a calendar event{canSyncGoogle ? " and syncs to Google" : ""}
