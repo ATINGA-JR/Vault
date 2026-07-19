@@ -42,7 +42,13 @@ function CashFlowPage() {
         eyebrow="Cash Flow"
         title="Where the money goes."
         subtitle="Track income, expenses, and transfers across all your banks."
-        action={<div className="flex gap-2"><AddBankDialog /><AddTransactionDialog /></div>}
+        action={
+          <div className="flex gap-2">
+            <ClearCashFlowButton />
+            <AddBankDialog />
+            <AddTransactionDialog />
+          </div>
+        }
       />
 
       <Section title="Accounts">
@@ -164,6 +170,19 @@ function BankActions({ bank }: { bank: Bank }) {
       </button>
       <EditBankDialog bank={bank} open={openEdit} onOpenChange={setOpenEdit} />
     </>
+  );
+}
+
+function ClearCashFlowButton() {
+  function clear() {
+    if (!confirm("Clear all cash flow data? This deletes every bank and transaction and cannot be undone.")) return;
+    setState((s) => ({ ...s, banks: [], transactions: [] }));
+    toast.success("Cash flow data cleared");
+  }
+  return (
+    <Button variant="outline" size="sm" onClick={clear} className="text-destructive">
+      <Trash2 className="mr-1 h-4 w-4" />Clear all
+    </Button>
   );
 }
 
