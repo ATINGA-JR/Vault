@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app/AppShell";
 import { AuthGate } from "@/components/app/AuthGate";
 import { PageHeader, Section, EmptyState, StatCard } from "@/components/app/ui-bits";
 import { useStore, setState, uid } from "@/lib/store";
-import { formatNaira, todayISO } from "@/lib/format";
+import { formatNaira, todayISO, toISODate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -388,24 +388,30 @@ function Reports({ bank }: { bank: string }) {
   const today = todayISO();
   const tabs = useMemo(() => {
     const daily = filtered.filter((t) => t.date === today);
-    const weekStart = new Date(); weekStart.setDate(weekStart.getDate() - weekStart.getDay());
-    const weekly = filtered.filter((t) => new Date(t.date) >= weekStart);
+    // Rolling 7-day window (today and the 6 days before it), not a fixed
+    // Sun–Sat calendar week — so recent transactions never disappear just
+    // because they fall on the "wrong" side of a Sunday boundary.
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 6);
+    const weekAgoISO = toISODate(weekAgo);
+    const weekly = filtered.filter((t) => t.date >= weekAgoISO && t.date <= today);
     const monthly = filtered.filter((t) => t.date.startsWith(today.slice(0, 7)));
     const yearly = filtered.filter((t) => t.date.startsWith(today.slice(0, 4)));
-    return { daily, weekly, monthly, yearly };
+    return { all: filtered, daily, weekly, monthly, yearly };
   }, [filtered, today]);
 
   const [dailyFilter, setDailyFilter] = useState<"all" | "income" | "expense" | "intra">("all");
   const dailyShown = dailyFilter === "all" ? tabs.daily : tabs.daily.filter((t) => t.type === dailyFilter);
 
   return (
-    <Tabs defaultValue="daily">
+    <Tabs defaultValue="all">
       <TabsList>
+        <TabsTrigger value="all">All</TabsTrigger>
         <TabsTrigger value="daily">Daily</TabsTrigger>
         <TabsTrigger value="weekly">Weekly</TabsTrigger>
         <TabsTrigger value="monthly">Monthly</TabsTrigger>
         <TabsTrigger value="yearly">Yearly</TabsTrigger>
       </TabsList>
+      <TabsContent value="all" className="mt-4"><TxList tx={tabs.all} banks={banks} /></TabsContent>
       <TabsContent value="daily" className="mt-4">
         <div className="mb-3 flex gap-1">
           {(["all", "income", "expense", "intra"] as const).map((f) => (
