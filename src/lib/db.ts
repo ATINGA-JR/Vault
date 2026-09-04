@@ -1,8 +1,7 @@
 // All Supabase read/write operations for Vault Personal OS.
-// Routes and components never import this directly — they go through store.ts.
 import { supabase } from "./supabase";
 import type {
-  Task, Bank, Transaction, Book, Watch, CalendarEvent,
+  Task, Book, Movie, Show,
   ShoppingList, Notification, Settings, AppData,
 } from "./types";
 
@@ -10,49 +9,34 @@ import type {
 // HELPERS
 // ─────────────────────────────────────────────────────────────
 
-// Fetch the IDs that currently exist for a table, then delete any
-// that are no longer in `keepIds`. Avoids the finicky NOT IN syntax.
-async function deleteOrphans(
-  table: string,
-  userId: string,
-  keepIds: string[],
-) {
-  const { data } = await supabase
-    .from(table)
-    .select("id")
-    .eq("user_id", userId);
-
+async function deleteOrphans(table: string, userId: string, keepIds: string[]) {
+  const { data } = await supabase.from(table).select("id").eq("user_id", userId);
   const toDelete = (data ?? [])
     .map((r: { id: string }) => r.id)
     .filter((id) => !keepIds.includes(id));
-
   if (toDelete.length > 0) {
     await supabase.from(table).delete().in("id", toDelete);
   }
 }
 
 // ─────────────────────────────────────────────────────────────
-// LOAD — fetch everything for a user on login
+// LOAD
 // ─────────────────────────────────────────────────────────────
 
 export async function loadUserData(userId: string): Promise<Partial<AppData>> {
   const [
     { data: tasksRaw },
-    { data: banksRaw },
-    { data: txRaw },
     { data: booksRaw },
-    { data: watchRaw },
-    { data: eventsRaw },
+    { data: moviesRaw },
+    { data: showsRaw },
     { data: settingsRaw },
     { data: notifsRaw },
     { data: listsRaw },
   ] = await Promise.all([
     supabase.from("tasks").select("*").eq("user_id", userId).order("created_at"),
-    supabase.from("banks").select("*").eq("user_id", userId).order("created_at"),
-    supabase.from("transactions").select("*").eq("user_id", userId).order("created_at"),
     supabase.from("books").select("*").eq("user_id", userId).order("created_at"),
-    supabase.from("watchlist").select("*").eq("user_id", userId).order("created_at"),
-    supabase.from("calendar_events").select("*").eq("user_id", userId).order("date"),
+    supabase.from("movies").select("*").eq("user_id", userId).order("created_at"),
+    supabase.from("shows").select("*").eq("user_id", userId).order("created_at"),
     supabase.from("settings").select("*").eq("user_id", userId).single(),
     supabase.from("notifications").select("*").eq("user_id", userId)
       .order("created_at", { ascending: false }).limit(200),
@@ -65,7 +49,6 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     `).eq("user_id", userId).order("created_at"),
   ]);
 
-  // Map DB rows → app types (snake_case → camelCase)
   const tasks: Task[] = (tasksRaw ?? []).map((r: Record<string, unknown>) => ({
     id: r.id as string,
     text: r.text as string,
@@ -73,29 +56,6 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     dueDate: (r.due_date as string | null) ?? undefined,
     dueTime: (r.due_time as string | null) ?? undefined,
     done: r.done as boolean,
-    createdAt: r.created_at as string,
-  }));
-
-  const banks: Bank[] = (banksRaw ?? []).map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    name: r.name as string,
-    icon: r.icon as string,
-    color: r.color as string,
-    createdAt: r.created_at as string,
-  }));
-
-  const transactions: Transaction[] = (txRaw ?? []).map((r: Record<string, unknown>) => ({
-    id: r.id as string,
-    description: r.description as string,
-    amount: r.amount as number,
-    type: r.type as Transaction["type"],
-    category: r.category as Transaction["category"],
-    bankId: (r.bank_id as string | null) ?? undefined,
-    fromBankId: (r.from_bank_id as string | null) ?? undefined,
-    toBankId: (r.to_bank_id as string | null) ?? undefined,
-    date: r.date as string,
-    time: r.time as string,
-    recurrence: (r.recurrence as Transaction["recurrence"] | null) ?? undefined,
     createdAt: r.created_at as string,
   }));
 
@@ -108,23 +68,21 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
     createdAt: r.created_at as string,
   }));
 
-  const watchlist: Watch[] = (watchRaw ?? []).map((r: Record<string, unknown>) => ({
+  const movies: Movie[] = (moviesRaw ?? []).map((r: Record<string, unknown>) => ({
     id: r.id as string,
     title: r.title as string,
-    type: r.type as Watch["type"],
     year: (r.year as number | null) ?? undefined,
     watching: (r.watching as boolean) ?? false,
     watched: r.watched as boolean,
     createdAt: r.created_at as string,
   }));
 
-  const events: CalendarEvent[] = (eventsRaw ?? []).map((r: Record<string, unknown>) => ({
+  const shows: Show[] = (showsRaw ?? []).map((r: Record<string, unknown>) => ({
     id: r.id as string,
-    name: r.name as string,
-    date: r.date as string,
-    time: (r.time as string | null) ?? undefined,
-    color: r.color as string,
-    googleEventId: (r.google_event_id as string | null) ?? undefined,
+    title: r.title as string,
+    year: (r.year as number | null) ?? undefined,
+    watching: (r.watching as boolean) ?? false,
+    watched: r.watched as boolean,
     createdAt: r.created_at as string,
   }));
 
@@ -159,54 +117,38 @@ export async function loadUserData(userId: string): Promise<Partial<AppData>> {
       })),
   }));
 
-  // Map settings (flat DB columns → nested store shape)
   const settings: Settings | undefined = settingsRaw
     ? {
         theme: (settingsRaw as Record<string, unknown>).theme as Settings["theme"],
         notify: {
-          events: (settingsRaw as Record<string, unknown>).notify_events as boolean,
           tasks: (settingsRaw as Record<string, unknown>).notify_tasks as boolean,
-          budget: (settingsRaw as Record<string, unknown>).notify_budget as boolean,
           weekly: (settingsRaw as Record<string, unknown>).notify_weekly as boolean,
         },
       }
     : undefined;
 
-  const lastWeeklySummary =
-    settingsRaw
-      ? ((settingsRaw as Record<string, unknown>).last_weekly_summary as string | null) ?? undefined
-      : undefined;
+  const lastWeeklySummary = settingsRaw
+    ? ((settingsRaw as Record<string, unknown>).last_weekly_summary as string | null) ?? undefined
+    : undefined;
 
   return {
-    tasks,
-    banks,
-    transactions,
-    books,
-    watchlist,
-    events,
-    shoppingLists,
-    notifications,
+    tasks, books, movies, shows, shoppingLists, notifications,
     ...(settings ? { settings } : {}),
     ...(lastWeeklySummary ? { lastWeeklySummary } : {}),
   };
 }
 
 // ─────────────────────────────────────────────────────────────
-// SYNC — write changed slices back to Supabase
+// SYNC
 // ─────────────────────────────────────────────────────────────
 
 export async function syncTasks(userId: string, tasks: Task[]) {
   if (tasks.length > 0) {
     await supabase.from("tasks").upsert(
       tasks.map((t) => ({
-        id: t.id,
-        user_id: userId,
-        text: t.text,
-        priority: t.priority,
-        due_date: t.dueDate ?? null,
-        due_time: t.dueTime ?? null,
-        done: t.done,
-        created_at: t.createdAt,
+        id: t.id, user_id: userId, text: t.text, priority: t.priority,
+        due_date: t.dueDate ?? null, due_time: t.dueTime ?? null,
+        done: t.done, created_at: t.createdAt,
       })),
       { onConflict: "id" },
     );
@@ -214,58 +156,12 @@ export async function syncTasks(userId: string, tasks: Task[]) {
   await deleteOrphans("tasks", userId, tasks.map((t) => t.id));
 }
 
-export async function syncBanks(userId: string, banks: Bank[]) {
-  if (banks.length > 0) {
-    await supabase.from("banks").upsert(
-      banks.map((b) => ({
-        id: b.id,
-        user_id: userId,
-        name: b.name,
-        icon: b.icon,
-        color: b.color,
-        created_at: b.createdAt,
-      })),
-      { onConflict: "id" },
-    );
-  }
-  await deleteOrphans("banks", userId, banks.map((b) => b.id));
-}
-
-export async function syncTransactions(userId: string, transactions: Transaction[]) {
-  if (transactions.length > 0) {
-    await supabase.from("transactions").upsert(
-      transactions.map((t) => ({
-        id: t.id,
-        user_id: userId,
-        description: t.description,
-        amount: t.amount,
-        type: t.type,
-        category: t.category,
-        bank_id: t.bankId ?? null,
-        from_bank_id: t.fromBankId ?? null,
-        to_bank_id: t.toBankId ?? null,
-        date: t.date,
-        time: t.time,
-        recurrence: t.recurrence ?? null,
-        created_at: t.createdAt,
-      })),
-      { onConflict: "id" },
-    );
-  }
-  await deleteOrphans("transactions", userId, transactions.map((t) => t.id));
-}
-
 export async function syncBooks(userId: string, books: Book[]) {
   if (books.length > 0) {
     await supabase.from("books").upsert(
       books.map((b) => ({
-        id: b.id,
-        user_id: userId,
-        title: b.title,
-        author: b.author,
-        reading: b.reading,
-        read: b.read,
-        created_at: b.createdAt,
+        id: b.id, user_id: userId, title: b.title, author: b.author,
+        reading: b.reading, read: b.read, created_at: b.createdAt,
       })),
       { onConflict: "id" },
     );
@@ -273,94 +169,61 @@ export async function syncBooks(userId: string, books: Book[]) {
   await deleteOrphans("books", userId, books.map((b) => b.id));
 }
 
-export async function syncWatchlist(userId: string, watchlist: Watch[]) {
-  if (watchlist.length > 0) {
-    await supabase.from("watchlist").upsert(
-      watchlist.map((w) => ({
-        id: w.id,
-        user_id: userId,
-        title: w.title,
-        type: w.type,
-        year: w.year ?? null,
-        watching: w.watching,
-        watched: w.watched,
-        created_at: w.createdAt,
+export async function syncMovies(userId: string, movies: Movie[]) {
+  if (movies.length > 0) {
+    await supabase.from("movies").upsert(
+      movies.map((m) => ({
+        id: m.id, user_id: userId, title: m.title, year: m.year ?? null,
+        watching: m.watching, watched: m.watched, created_at: m.createdAt,
       })),
       { onConflict: "id" },
     );
   }
-  await deleteOrphans("watchlist", userId, watchlist.map((w) => w.id));
+  await deleteOrphans("movies", userId, movies.map((m) => m.id));
 }
 
-export async function syncEvents(userId: string, events: CalendarEvent[]) {
-  if (events.length > 0) {
-    await supabase.from("calendar_events").upsert(
-      events.map((e) => ({
-        id: e.id,
-        user_id: userId,
-        name: e.name,
-        date: e.date,
-        time: e.time ?? null,
-        color: e.color,
-        google_event_id: e.googleEventId ?? null,
-        created_at: e.createdAt,
-        updated_at: new Date().toISOString(),
+export async function syncShows(userId: string, shows: Show[]) {
+  if (shows.length > 0) {
+    await supabase.from("shows").upsert(
+      shows.map((s) => ({
+        id: s.id, user_id: userId, title: s.title, year: s.year ?? null,
+        watching: s.watching, watched: s.watched, created_at: s.createdAt,
       })),
       { onConflict: "id" },
     );
   }
-  await deleteOrphans("calendar_events", userId, events.map((e) => e.id));
+  await deleteOrphans("shows", userId, shows.map((s) => s.id));
 }
 
 export async function syncShoppingLists(userId: string, lists: ShoppingList[]) {
-  // Collect all IDs for orphan cleanup
   const listIds = lists.map((l) => l.id);
   const sectionIds = lists.flatMap((l) => l.sections.map((s) => s.id));
-  const itemIds = lists.flatMap((l) =>
-    l.sections.flatMap((s) => s.items.map((i) => i.id)),
-  );
+  const itemIds = lists.flatMap((l) => l.sections.flatMap((s) => s.items.map((i) => i.id)));
 
-  // Upsert lists
   if (lists.length > 0) {
     await supabase.from("shopping_lists").upsert(
       lists.map((l) => ({
-        id: l.id,
-        user_id: userId,
-        name: l.name,
-        icon: l.icon,
-        color: l.color,
-        created_at: l.createdAt,
+        id: l.id, user_id: userId, name: l.name, icon: l.icon,
+        color: l.color, created_at: l.createdAt,
       })),
       { onConflict: "id" },
     );
   }
 
-  // Upsert sections
   const allSections = lists.flatMap((l) =>
     l.sections.map((s, idx) => ({
-      id: s.id,
-      user_id: userId,
-      list_id: l.id,
-      name: s.name,
-      sort_order: idx,
+      id: s.id, user_id: userId, list_id: l.id, name: s.name, sort_order: idx,
     })),
   );
   if (allSections.length > 0) {
     await supabase.from("shopping_sections").upsert(allSections, { onConflict: "id" });
   }
 
-  // Upsert items
   const allItems = lists.flatMap((l) =>
     l.sections.flatMap((s) =>
       s.items.map((i) => ({
-        id: i.id,
-        user_id: userId,
-        section_id: s.id,
-        name: i.name,
-        quantity: i.quantity,
-        unit: i.unit,
-        price: i.price,
-        done: i.done,
+        id: i.id, user_id: userId, section_id: s.id, name: i.name,
+        quantity: i.quantity, unit: i.unit, price: i.price, done: i.done,
       })),
     ),
   );
@@ -368,7 +231,6 @@ export async function syncShoppingLists(userId: string, lists: ShoppingList[]) {
     await supabase.from("shopping_items").upsert(allItems, { onConflict: "id" });
   }
 
-  // Delete orphans — items first (FK order), then sections, then lists
   await deleteOrphans("shopping_items", userId, itemIds);
   await deleteOrphans("shopping_sections", userId, sectionIds);
   await deleteOrphans("shopping_lists", userId, listIds);
@@ -378,13 +240,8 @@ export async function syncNotifications(userId: string, notifications: Notificat
   if (notifications.length > 0) {
     await supabase.from("notifications").upsert(
       notifications.map((n) => ({
-        id: n.id,
-        user_id: userId,
-        title: n.title,
-        body: n.body,
-        kind: n.kind,
-        read: n.read,
-        created_at: n.createdAt,
+        id: n.id, user_id: userId, title: n.title, body: n.body,
+        kind: n.kind, read: n.read, created_at: n.createdAt,
       })),
       { onConflict: "id" },
     );
@@ -392,18 +249,12 @@ export async function syncNotifications(userId: string, notifications: Notificat
   await deleteOrphans("notifications", userId, notifications.map((n) => n.id));
 }
 
-export async function syncSettings(
-  userId: string,
-  settings: Settings,
-  lastWeeklySummary?: string,
-) {
+export async function syncSettings(userId: string, settings: Settings, lastWeeklySummary?: string) {
   await supabase.from("settings").upsert(
     {
       user_id: userId,
       theme: settings.theme,
-      notify_events: settings.notify.events,
       notify_tasks: settings.notify.tasks,
-      notify_budget: settings.notify.budget,
       notify_weekly: settings.notify.weekly,
       last_weekly_summary: lastWeeklySummary ?? null,
       updated_at: new Date().toISOString(),
