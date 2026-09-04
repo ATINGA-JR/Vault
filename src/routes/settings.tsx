@@ -42,7 +42,6 @@ function SettingsPage() {
 
   async function signOut() {
     await supabase.auth.signOut();
-    // AuthProvider's onAuthStateChange clears the store automatically
   }
 
   async function wipe() {
@@ -50,17 +49,13 @@ function SettingsPage() {
     if (!user) return;
     setWiping(true);
     try {
-      // Delete all user data from every table (cascade handles children)
       await Promise.all([
         supabase.from("tasks").delete().eq("user_id", user.id),
-        supabase.from("transactions").delete().eq("user_id", user.id),
-        supabase.from("banks").delete().eq("user_id", user.id),
         supabase.from("books").delete().eq("user_id", user.id),
-        supabase.from("watchlist").delete().eq("user_id", user.id),
-        supabase.from("calendar_events").delete().eq("user_id", user.id),
+        supabase.from("movies").delete().eq("user_id", user.id),
+        supabase.from("shows").delete().eq("user_id", user.id),
         supabase.from("shopping_lists").delete().eq("user_id", user.id),
         supabase.from("notifications").delete().eq("user_id", user.id),
-        supabase.from("vault_blob").delete().eq("user_id", user.id),
       ]);
       toast.success("All data cleared.");
       await supabase.auth.signOut();
@@ -124,9 +119,7 @@ function SettingsPage() {
         <div className="divide-y divide-border rounded-lg border border-border bg-card">
           {(
             [
-              ["events", "Calendar events", "Reminders for events today and tomorrow"],
               ["tasks", "Tasks due", "Alerts for tasks due today or overdue"],
-              ["budget", "Budget alerts", "Warn when spending exceeds 80% of income"],
               ["weekly", "Weekly summary", "Monday morning recap"],
             ] as const
           ).map(([key, label, desc]) => (
@@ -161,7 +154,7 @@ function SettingsPage() {
               {wiping ? "Clearing…" : "Clear all data"}
             </Button>
             <p className="mt-2 text-xs text-muted-foreground">
-              Permanently deletes all your tasks, transactions, events, and vault data.
+              Permanently deletes all your tasks, books, movies, shows, and shopping lists.
             </p>
           </div>
         </div>
