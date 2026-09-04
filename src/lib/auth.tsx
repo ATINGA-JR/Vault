@@ -2,7 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { initStore, clearStore } from "./store";
-import { initVault, clearVault } from "./vault";
 
 interface AuthState {
   session: Session | null;
@@ -35,22 +34,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function onSignIn(newSession: Session) {
     setSession(newSession);
     fetchUsername(newSession.user.id);
-    // Load all module data and vault in parallel
-    await Promise.all([
-      initStore(newSession.user.id),
-      initVault(newSession.user.id),
-    ]);
+    await initStore(newSession.user.id);
   }
 
   function onSignOut() {
     setSession(null);
     setUsername(null);
     clearStore();
-    clearVault();
   }
 
   useEffect(() => {
-    // Hydrate immediately from cached session (avoids flash on reload)
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
         await onSignIn(data.session);
@@ -58,7 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    // Keep in sync across tabs and token refreshes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
