@@ -1,18 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import {
-  ListTodo, Wallet, BookOpen, Film, ShoppingCart, CalendarDays,
-  ArrowUpRight, TrendingUp, TrendingDown,
-} from "lucide-react";
+import { BookOpen, Film, Tv, ShoppingCart } from "lucide-react";
 import { AppShell } from "@/components/app/AppShell";
 import { AuthGate } from "@/components/app/AuthGate";
 import { PageHeader, Section, StatCard, EmptyState } from "@/components/app/ui-bits";
 import { useStore } from "@/lib/store";
 import { useAuth } from "@/lib/auth";
-import { formatNaira, greeting, formatDateLong, todayISO } from "@/lib/format";
-import { cn } from "@/lib/utils";
-import { Progress } from "@/components/ui/progress";
+import { greeting, formatDateLong, todayISO } from "@/lib/format";
 
 export const Route = createFileRoute("/")({
   head: () => ({ meta: [{ title: "Dashboard — Vault" }] }),
@@ -28,66 +23,49 @@ export const Route = createFileRoute("/")({
 function Dashboard() {
   const { username } = useAuth();
   const tasks = useStore((s) => s.tasks);
-  const transactions = useStore((s) => s.transactions);
-  const banks = useStore((s) => s.banks);
   const books = useStore((s) => s.books);
-  const watchlist = useStore((s) => s.watchlist);
-  const events = useStore((s) => s.events);
+  const movies = useStore((s) => s.movies);
+  const shows = useStore((s) => s.shows);
   const shoppingLists = useStore((s) => s.shoppingLists);
 
   const stats = useMemo(() => {
-    const month = todayISO().slice(0, 7);
-    let income = 0, expense = 0;
-    for (const t of transactions) {
-      if (!t.date.startsWith(month)) continue;
-      if (t.type === "income") income += t.amount;
-      else if (t.type === "expense") expense += t.amount;
-    }
-    const upcoming = events.filter((e) => {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const diff = (new Date(e.date + "T00:00:00").getTime() - today.getTime()) / 86400000;
-      return diff >= 0 && diff < 14;
-    });
     const pendingShopping = shoppingLists.reduce(
       (n, l) => n + l.sections.reduce((m, s) => m + s.items.filter((i) => !i.done).length, 0), 0,
     );
     return {
       pendingTasks: tasks.filter((t) => !t.done).length,
-      income, expense, balance: income - expense,
       booksToRead: books.filter((b) => !b.read && !b.reading).length,
       booksReading: books.filter((b) => b.reading && !b.read).length,
-      moviesToWatch: watchlist.filter((w) => !w.watched && !w.watching).length,
-      moviesWatching: watchlist.filter((w) => w.watching && !w.watched).length,
+      moviesToWatch: movies.filter((m) => !m.watched && !m.watching).length,
+      moviesWatching: movies.filter((m) => m.watching && !m.watched).length,
+      showsToWatch: shows.filter((sh) => !sh.watched && !sh.watching).length,
+      showsWatching: shows.filter((sh) => sh.watching && !sh.watched).length,
       shoppingLists: shoppingLists.length,
       pendingShopping,
-      upcoming,
     };
-  }, [tasks, transactions, books, watchlist, events, shoppingLists]);
+  }, [tasks, books, movies, shows, shoppingLists]);
 
   const pending = tasks
     .filter((t) => !t.done)
     .sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"))
     .slice(0, 5);
 
-  const recentTx = [...transactions].sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time)).slice(0, 3);
-  // Prioritise currently reading/watching, then fall back to first in queue
   const currentBook = books.find((b) => b.reading && !b.read) ?? books.find((b) => !b.read);
-  const currentMovie = watchlist.find((w) => w.watching && !w.watched) ?? watchlist.find((w) => !w.watched);
-  const incomePct = stats.income > 0 ? Math.min(100, (stats.expense / stats.income) * 100) : 0;
+  const currentMovie = movies.find((m) => m.watching && !m.watched) ?? movies.find((m) => !m.watched);
+  const currentShow = shows.find((sh) => sh.watching && !sh.watched) ?? shows.find((sh) => !sh.watched);
 
   return (
     <>
       <PageHeader
-        eyebrow={formatDateLong(new Date())}
+        eyebrow={formatDateLong(todayISO())}
         title={`${greeting()}, ${username ?? ""}.`}
         subtitle="Here's everything on your plate today."
       />
 
       <Section>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3 lg:grid-cols-5">
           <Link to="/tasks"><StatCard label="Tasks" value={stats.pendingTasks} hint="Pending" /></Link>
-          <Link to="/cash-flow"><StatCard label="Balance" value={formatNaira(stats.balance)} hint="This month" accent /></Link>
-          <Link to="/reading">
+          <Link to="/books">
             <StatCard
               label="Books"
               value={stats.booksReading > 0 ? stats.booksReading : stats.booksToRead}
@@ -95,138 +73,61 @@ function Dashboard() {
               accent={stats.booksReading > 0}
             />
           </Link>
-          <Link to="/watch">
+          <Link to="/movies">
             <StatCard
-              label="Watchlist"
+              label="Movies"
               value={stats.moviesWatching > 0 ? stats.moviesWatching : stats.moviesToWatch}
               hint={stats.moviesWatching > 0 ? "Watching now" : "To watch"}
               accent={stats.moviesWatching > 0}
             />
           </Link>
+          <Link to="/shows">
+            <StatCard
+              label="Shows"
+              value={stats.showsWatching > 0 ? stats.showsWatching : stats.showsToWatch}
+              hint={stats.showsWatching > 0 ? "Watching now" : "To watch"}
+              accent={stats.showsWatching > 0}
+            />
+          </Link>
           <Link to="/shopping"><StatCard label="Shopping" value={stats.pendingShopping} hint={`${stats.shoppingLists} list${stats.shoppingLists === 1 ? "" : "s"}`} /></Link>
-          <Link to="/calendar"><StatCard label="Upcoming" value={stats.upcoming.length} hint="Next 2 weeks" /></Link>
         </div>
       </Section>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Tasks */}
-        <Section title="Pending tasks" subtitle="Top 5" className="lg:col-span-2">
-          {pending.length === 0 ? (
-            <EmptyState icon={<ListTodo className="h-5 w-5" />} title="Inbox zero." body="Nothing pending."
-              action={<Link to="/tasks" className="text-sm font-medium text-primary hover:underline">Add a task →</Link>} />
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-              {pending.map((t) => (
-                <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full",
-                    t.priority === "high" ? "bg-destructive" : t.priority === "medium" ? "bg-warning" : "bg-muted-foreground/50",
-                  )} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm">{t.text}</div>
-                    {t.dueDate && <div className="text-xs text-muted-foreground">{t.dueDate}{t.dueTime ? ` · ${t.dueTime}` : ""}</div>}
-                  </div>
-                  <Link to="/tasks" className="text-muted-foreground hover:text-foreground"><ArrowUpRight className="h-4 w-4" /></Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-
-        {/* Budget */}
-        <Section title="This month" subtitle="Cash flow">
-          <div className="rounded-lg border border-border bg-card p-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingUp className="h-3 w-3 text-success" /> Income</div>
-                <div className="mt-1 font-serif text-xl tabular-nums">{formatNaira(stats.income)}</div>
-              </div>
-              <div>
-                <div className="flex items-center gap-1 text-xs text-muted-foreground"><TrendingDown className="h-3 w-3 text-destructive" /> Expense</div>
-                <div className="mt-1 font-serif text-xl tabular-nums">{formatNaira(stats.expense)}</div>
-              </div>
-            </div>
-            <div className="mt-5">
-              <div className="mb-1.5 flex items-center justify-between text-xs text-muted-foreground">
-                <span>Spent</span>
-                <span className="tabular-nums">{Math.round(incomePct)}% of income</span>
-              </div>
-              <Progress value={incomePct} className="h-2" />
-            </div>
-            <div className="mt-5 border-t border-border pt-4">
-              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Net balance</div>
-              <div className="mt-1 font-serif text-3xl tabular-nums">{formatNaira(stats.balance)}</div>
-            </div>
-          </div>
-        </Section>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Recent transactions">
-          {recentTx.length === 0 ? (
-            <EmptyState icon={<Wallet className="h-5 w-5" />} title="No transactions yet." />
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-              {recentTx.map((t) => {
-                const bank = banks.find((b) => b.id === t.bankId || b.id === t.fromBankId);
-                return (
-                  <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-                    <span className="grid h-9 w-9 place-items-center rounded-md bg-secondary text-base">
-                      {t.type === "income" ? "↓" : t.type === "expense" ? "↑" : "⇄"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{t.description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {t.category} · {t.date}{bank ? ` · ${bank.name}` : ""}
-                      </div>
-                    </div>
-                    <div className={cn("text-sm font-medium tabular-nums",
-                      t.type === "income" ? "text-success" : t.type === "expense" ? "text-destructive" : "text-muted-foreground")}>
-                      {t.type === "expense" ? "-" : t.type === "income" ? "+" : ""}{formatNaira(t.amount)}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </Section>
-
-        <Section title="Upcoming events">
-          {stats.upcoming.length === 0 ? (
-            <EmptyState icon={<CalendarDays className="h-5 w-5" />} title="Calendar's clear." />
-          ) : (
-            <ul className="divide-y divide-border rounded-lg border border-border bg-card">
-              {stats.upcoming.slice(0, 4).map((e) => (
-                <li key={e.id} className="flex items-center gap-3 px-4 py-3">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: e.color }} />
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">{e.name}</div>
-                    <div className="text-xs text-muted-foreground">{e.date}{e.time ? ` · ${e.time}` : ""}</div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-      </div>
+      <Section title="Pending tasks" subtitle="Top 5">
+        {pending.length === 0 ? (
+          <EmptyState title="Inbox zero." body="Nothing pending." action={<Link to="/tasks" className="text-sm text-primary hover:underline">Add a task →</Link>} />
+        ) : (
+          <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+            {pending.map((t) => (
+              <li key={t.id} className="flex items-center gap-3 px-4 py-3">
+                <span className={`h-2 w-2 shrink-0 rounded-full ${t.priority === "high" ? "bg-destructive" : t.priority === "medium" ? "bg-warning" : "bg-muted-foreground/50"}`} />
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm">{t.text}</div>
+                  {t.dueDate && <div className="text-xs text-muted-foreground">{t.dueDate}{t.dueTime ? ` · ${t.dueTime}` : ""}</div>}
+                </div>
+                <Link to="/tasks" className="text-muted-foreground hover:text-foreground">↗</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Section title="Up next" subtitle="Book">
           {currentBook ? (
             <div className="rounded-lg border border-border bg-card p-5">
-              <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-primary/20 to-primary/5 font-serif text-2xl">
+              <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-primary/20 to-primary/5">
                 <BookOpen className="h-5 w-5 text-primary" />
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <span className="font-serif text-lg">{currentBook.title}</span>
-                {currentBook.reading && (
-                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Reading</span>
-                )}
+                {currentBook.reading && <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Reading</span>}
               </div>
               <div className="text-xs text-muted-foreground">{currentBook.author}</div>
             </div>
           ) : <EmptyState icon={<BookOpen className="h-5 w-5" />} title="No books queued." />}
         </Section>
-        <Section title="Up next" subtitle="Watch">
+        <Section title="Up next" subtitle="Movie">
           {currentMovie ? (
             <div className="rounded-lg border border-border bg-card p-5">
               <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-chart-3/20 to-chart-3/5">
@@ -234,32 +135,25 @@ function Dashboard() {
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <span className="font-serif text-lg">{currentMovie.title}</span>
-                {currentMovie.watching && (
-                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Watching</span>
-                )}
+                {currentMovie.watching && <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Watching</span>}
               </div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">{currentMovie.type}{currentMovie.year ? ` · ${currentMovie.year}` : ""}</div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{currentMovie.year ?? ""}</div>
             </div>
-          ) : <EmptyState icon={<Film className="h-5 w-5" />} title="Nothing on the watchlist." />}
+          ) : <EmptyState icon={<Film className="h-5 w-5" />} title="No movies queued." />}
         </Section>
-        <Section title="Shopping lists">
-          {shoppingLists.length === 0 ? (
-            <EmptyState icon={<ShoppingCart className="h-5 w-5" />} title="No lists yet." />
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {shoppingLists.map((l) => {
-                const total = l.sections.reduce((n, s) => n + s.items.length, 0);
-                const done = l.sections.reduce((n, s) => n + s.items.filter((i) => i.done).length, 0);
-                return (
-                  <Link key={l.id} to="/shopping" className="rounded-full border border-border bg-card px-3 py-1.5 text-xs hover:border-border-strong">
-                    <span className="mr-1">{l.icon}</span>
-                    <span className="font-medium">{l.name}</span>
-                    <span className="ml-2 tabular-nums text-muted-foreground">{done}/{total}</span>
-                  </Link>
-                );
-              })}
+        <Section title="Up next" subtitle="Show">
+          {currentShow ? (
+            <div className="rounded-lg border border-border bg-card p-5">
+              <div className="grid h-20 w-14 place-items-center rounded bg-gradient-to-br from-chart-3/20 to-chart-3/5">
+                <Tv className="h-5 w-5 text-info" />
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <span className="font-serif text-lg">{currentShow.title}</span>
+                {currentShow.watching && <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">Watching</span>}
+              </div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">{currentShow.year ?? ""}</div>
             </div>
-          )}
+          ) : <EmptyState icon={<Tv className="h-5 w-5" />} title="No shows queued." />}
         </Section>
       </div>
     </>
